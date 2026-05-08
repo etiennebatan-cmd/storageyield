@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
 export default function LeadsRedirectPage() {
-  redirect("/app/bookings");
+  redirect("/app/booking-conversion");
 }

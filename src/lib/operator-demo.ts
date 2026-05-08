@@ -18,9 +18,6 @@ export type SignalCategory =
   | "competitor_price_up"
   | "competitor_price_down"
   | "high_demand_unit_type"
-  | "low_demand_unit_type"
-  | "under_market_price"
-  | "over_market_vacancy_risk"
   | "low_occupancy_unit_type"
   | "discount_leakage"
   | "tenant_below_market"
@@ -29,10 +26,11 @@ export type SignalCategory =
   | "seasonal_campaign_opportunity"
   | "large_unit_split_candidate"
   | "stale_competitor_price"
-  | "data_health_issue";
+  | "under_market_price"
+  | "over_market_vacancy_risk";
 
 export type ActionCategory = "pricing" | "discount_recovery" | "booking_follow_up" | "collections" | "competitor_response" | "campaign" | "unit_mix" | "b2b_growth";
-export type ActionStatus = "proposed" | "approved" | "active" | "completed" | "rejected" | "dismissed";
+export type ActionStatus = "proposed" | "approved" | "active" | "completed" | "dismissed" | "rejected";
 export type Priority = "high" | "medium" | "low";
 
 export interface OperatorSignal {

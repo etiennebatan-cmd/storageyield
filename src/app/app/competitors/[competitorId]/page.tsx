@@ -59,7 +59,7 @@ export default async function CompetitorDetailPage({ params }: { params: { compe
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <Link className="text-sm text-slate-600 underline-offset-2 hover:underline" href="/app/competitors">Back to Market Radar</Link>
+          <Link className="text-sm text-slate-600 underline-offset-2 hover:underline" href="/app/market-radar">Back to Market Radar</Link>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight">{(competitor as Competitor).name}</h1>
           <p className="text-sm text-slate-600">Operator-selected market profile, pricing URLs, unit mappings, and manual observations.</p>
         </div>

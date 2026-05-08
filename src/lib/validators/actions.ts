@@ -24,7 +24,7 @@ export const unitUpdateSchema = z.object({
 
 export const bookingStatusSchema = z.object({
   booking_id: z.string().uuid(),
-  status: z.enum(["requested", "reserved", "approved", "rejected", "cancelled", "converted"]),
+  status: z.enum(["requested", "contacted", "reserved", "approved", "rejected", "cancelled", "converted", "lost"]),
   organization_id: z.string().uuid().optional(),
   facility_id: z.string().uuid().optional(),
   selected_unit_id: z.string().uuid().nullable().optional(),

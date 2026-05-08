@@ -1,5 +1,5 @@
-import { MarketRadarWorkspace } from "@/components/app/live-cockpit";
+import { redirect } from "next/navigation";
 
 export default function MarketRadarPage() {
-  return <MarketRadarWorkspace />;
+  redirect("/app/market-radar");
 }

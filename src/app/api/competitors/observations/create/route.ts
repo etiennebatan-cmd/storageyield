@@ -23,7 +23,7 @@ export async function POST(request: Request) {
   if (authError || !userData.user) return NextResponse.json({ error: "Authentication required" }, { status: 401 });
 
   const observedAt = new Date(parsed.data.observed_at).toISOString();
-  const { error } = await supabase.from("competitor_price_observations").insert({
+  const { data, error } = await supabase.from("competitor_price_observations").insert({
     competitor_id: parsed.data.competitor_id,
     competitor_unit_type_id: parsed.data.competitor_unit_type_id ?? null,
     observed_price_monthly: parsed.data.observed_price_monthly,
@@ -33,9 +33,9 @@ export async function POST(request: Request) {
     source_url: parsed.data.source_url || null,
     observed_at: observedAt,
     observation_method: parsed.data.observation_method
-  });
+  }).select("*").single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   await supabase.from("competitors").update({ last_observed_at: observedAt }).eq("id", parsed.data.competitor_id);
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, observation: data });
 }

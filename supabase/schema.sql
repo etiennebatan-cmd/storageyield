@@ -138,6 +138,12 @@ exception
   when duplicate_object then null;
 end $$;
 
+alter type signal_category add value if not exists 'low_demand_unit_type';
+alter type signal_category add value if not exists 'under_market_price';
+alter type signal_category add value if not exists 'over_market_vacancy_risk';
+alter type signal_category add value if not exists 'data_health_issue';
+alter type operator_action_status add value if not exists 'rejected';
+
 do $$
 begin
   create type campaign_status as enum ('draft', 'active', 'paused', 'completed');
@@ -465,6 +471,20 @@ create table if not exists weekly_reports (
   recommendations jsonb not null,
   created_at timestamptz not null default now()
 );
+
+alter table actions add column if not exists campaign_id uuid references campaigns(id) on delete set null;
+alter table actions add column if not exists booking_request_id uuid references booking_requests(id) on delete set null;
+alter table actions add column if not exists decision_question text;
+alter table actions add column if not exists confidence_score numeric;
+alter table actions add column if not exists risk_level text not null default 'low';
+alter table actions add column if not exists recommendation text not null default 'review';
+alter table actions add column if not exists proposed_change jsonb not null default '{}'::jsonb;
+alter table actions add column if not exists approved_change jsonb;
+alter table actions add column if not exists outcome jsonb;
+alter table actions add column if not exists approved_at timestamptz;
+alter table actions add column if not exists dismissed_at timestamptz;
+alter table signals add column if not exists description text;
+alter table signals add column if not exists status text not null default 'new';
 
 alter table competitors add column if not exists last_observed_at timestamptz;
 

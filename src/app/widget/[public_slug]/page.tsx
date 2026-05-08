@@ -17,14 +17,7 @@ type AvailabilityRow = {
 };
 
 export default async function WidgetPage({ params }: { params: { public_slug: string } }) {
-  const supabase = createClient();
-  const { data: facility } = await supabase
-    .from("facilities")
-    .select("id, name, city, public_slug")
-    .eq("public_slug", params.public_slug)
-    .single();
-
-  if (!facility && params.public_slug === "brussels-north-storage") {
+  if (params.public_slug === "brussels-north-storage") {
     const demoFacility = demoFacilities.find((item) => item.public_slug === "brussels-north-storage")!;
     const unitTypes = demoUnitTypes
       .filter((unitType) => unitType.facility_id === demoFacility.id)
@@ -46,6 +39,13 @@ export default async function WidgetPage({ params }: { params: { public_slug: st
       </main>
     );
   }
+
+  const supabase = createClient();
+  const { data: facility } = await supabase
+    .from("facilities")
+    .select("id, name, city, public_slug")
+    .eq("public_slug", params.public_slug)
+    .single();
 
   if (!facility) {
     return (

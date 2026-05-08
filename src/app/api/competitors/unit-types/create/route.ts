@@ -22,7 +22,7 @@ export async function POST(request: Request) {
   const { data: userData, error: authError } = await supabase.auth.getUser();
   if (authError || !userData.user) return NextResponse.json({ error: "Authentication required" }, { status: 401 });
 
-  const { error } = await supabase.from("competitor_unit_types").insert({
+  const { data, error } = await supabase.from("competitor_unit_types").insert({
     competitor_id: parsed.data.competitor_id,
     name: parsed.data.name.trim(),
     size_m2: parsed.data.size_m2 ?? null,
@@ -32,8 +32,8 @@ export async function POST(request: Request) {
     floor: parsed.data.floor || null,
     description: parsed.data.description || null,
     source_url: parsed.data.source_url || null
-  });
+  }).select("*").single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, competitor_unit_type: data });
 }

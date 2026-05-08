@@ -9,7 +9,7 @@ export default async function NewCompetitorPage() {
     return (
       <div className="space-y-5">
         <div>
-          <Link className="text-sm text-slate-600 underline-offset-2 hover:underline" href="/app/competitors">Back to Market Radar</Link>
+          <Link className="text-sm text-slate-600 underline-offset-2 hover:underline" href="/app/market-radar">Back to Market Radar</Link>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Add competitor</h1>
           <p className="text-sm text-slate-600">Track only the competitors you choose. Nearby operators are not used unless you add and assign them.</p>
         </div>
@@ -25,7 +25,7 @@ export default async function NewCompetitorPage() {
   return (
     <div className="space-y-5">
       <div>
-        <Link className="text-sm text-slate-600 underline-offset-2 hover:underline" href="/app/competitors">Back to Market Radar</Link>
+        <Link className="text-sm text-slate-600 underline-offset-2 hover:underline" href="/app/market-radar">Back to Market Radar</Link>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight">Add competitor</h1>
         <p className="text-sm text-slate-600">Track only the competitors you choose. Nearby operators are not used unless you add and assign them.</p>
       </div>

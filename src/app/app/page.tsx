@@ -1,5 +1,5 @@
-import { DecisionInboxWorkspace } from "@/components/app/live-cockpit";
+import { redirect } from "next/navigation";
 
 export default function DecisionInboxPage() {
-  return <DecisionInboxWorkspace />;
+  redirect("/app/decisions");
 }

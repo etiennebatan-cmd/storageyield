@@ -1,46 +1,62 @@
-import type { Campaign, OperatorAction, OperatorBooking, OperatorSignal } from "@/lib/operator-demo";
-import type { Competitor, CompetitorPriceObservation } from "@/lib/types";
+import type { ActionStatus, Campaign, OperatorAction, OperatorBooking, OperatorSignal } from "@/lib/operator-demo";
+import type { Competitor, CompetitorPriceObservation, Unit } from "@/lib/types";
+
+export type DemoActivityItem = {
+  id: string;
+  title: string;
+  description: string;
+  type: "booking" | "action" | "competitor" | "system" | "pricing" | "campaign";
+  created_at: string;
+};
+
+export type DemoActionEvent = {
+  id: string;
+  action_id: string;
+  event_type: string;
+  payload: Record<string, unknown>;
+  created_at: string;
+};
 
 export type DemoState = {
   unitTypePrices: Record<string, number>;
-  unitStatus: Record<string, string>;
-  unitRents: Record<string, number>;
-  bookingAssignedUnits: Record<string, string>;
-  actionStatus: Record<string, string>;
-  actionOutcomeNotes: Record<string, string>;
-  bookingStatus: Record<string, string>;
+  actionStatus: Record<string, ActionStatus>;
+  bookingStatus: Record<string, OperatorBooking["status"]>;
   widgetInstalled: boolean;
   onboardingSteps: Record<string, boolean>;
   bookings: OperatorBooking[];
   actions: OperatorAction[];
-  campaigns: Campaign[];
+  signals: OperatorSignal[];
   competitors: Competitor[];
   observations: CompetitorPriceObservation[];
-  signals: OperatorSignal[];
+  campaigns: Campaign[];
+  bookingAssignedUnits: Record<string, string>;
+  unitStatus: Record<string, Unit["status"]>;
+  unitRents: Record<string, number>;
   completedActionIds: string[];
-  actionEvents: Array<{ id: string; action_id: string; event_type: string; payload: Record<string, unknown>; created_at: string }>;
-  activity: Array<{ id: string; title: string; description: string; type: string; created_at: string }>;
+  actionOutcomeNotes: Record<string, string>;
+  actionEvents: DemoActionEvent[];
+  activity: DemoActivityItem[];
 };
 
 const STORAGE_KEY = "storageyield.demoState";
 
 const defaultState: DemoState = {
   unitTypePrices: {},
-  unitStatus: {},
-  unitRents: {},
-  bookingAssignedUnits: {},
   actionStatus: {},
-  actionOutcomeNotes: {},
   bookingStatus: {},
   widgetInstalled: false,
   onboardingSteps: {},
   bookings: [],
   actions: [],
-  campaigns: [],
+  signals: [],
   competitors: [],
   observations: [],
-  signals: [],
+  campaigns: [],
+  bookingAssignedUnits: {},
+  unitStatus: {},
+  unitRents: {},
   completedActionIds: [],
+  actionOutcomeNotes: {},
   actionEvents: [],
   activity: []
 };
@@ -55,23 +71,10 @@ export function loadDemoState(): DemoState {
       ...defaultState,
       ...parsed,
       unitTypePrices: parsed.unitTypePrices ?? {},
-      unitStatus: parsed.unitStatus ?? {},
-      unitRents: parsed.unitRents ?? {},
-      bookingAssignedUnits: parsed.bookingAssignedUnits ?? {},
       actionStatus: parsed.actionStatus ?? {},
-      actionOutcomeNotes: parsed.actionOutcomeNotes ?? {},
       bookingStatus: parsed.bookingStatus ?? {},
       widgetInstalled: parsed.widgetInstalled ?? false,
-      onboardingSteps: parsed.onboardingSteps ?? {},
-      bookings: parsed.bookings ?? [],
-      actions: parsed.actions ?? [],
-      campaigns: parsed.campaigns ?? [],
-      competitors: parsed.competitors ?? [],
-      observations: parsed.observations ?? [],
-      signals: parsed.signals ?? [],
-      completedActionIds: parsed.completedActionIds ?? [],
-      actionEvents: parsed.actionEvents ?? [],
-      activity: parsed.activity ?? []
+      onboardingSteps: parsed.onboardingSteps ?? {}
     };
   } catch {
     return defaultState;

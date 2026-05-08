@@ -1,5 +1,5 @@
-import { ReportsWorkspace } from "@/components/app/live-cockpit";
+import { redirect } from "next/navigation";
 
 export default function ReportsPage() {
-  return <ReportsWorkspace />;
+  redirect("/app/impact-report");
 }

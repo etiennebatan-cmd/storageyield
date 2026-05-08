@@ -1,122 +1,191 @@
-# StorageYield MVP
+# StorageYield
 
-StorageYield is an online booking + revenue intelligence layer for independent self-storage operators.
+Your PMS stores data. StorageYield turns it into revenue decisions.
 
-## Tech stack
+StorageYield is a concierge-pilot MVP for independent self-storage operators. It sits above existing tools and helps an operator decide which pricing, discount, competitor, booking and campaign decisions to approve this week to increase NOI. It is not a PMS replacement: it does not handle payments, access control, accounting, tenant portals or facility operations.
 
-- Next.js 14 App Router + TypeScript
-- Tailwind CSS
-- Supabase (PostgreSQL, Auth, RLS)
-- Zod + React Hook Form
-- Recharts + date-fns
+## Core Loop
 
-## Environment variables
+Input data -> detect signals -> create decisions -> operator approves or rejects -> state changes -> impact is tracked -> weekly report shows what changed.
 
-Copy `.env.example` to `.env.local`:
+Primary product areas:
 
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `RESEND_API_KEY` (optional; app can run with mocked email behavior)
+- Decision Inbox: approval-ready pricing, competitor, discount, booking and campaign decisions.
+- Revenue Control Room: high-level revenue pressure, money map, live activity and data health.
+- Market Radar: operator-selected competitors, manual price observations and market evidence.
+- Pricing Lab: pricing opportunities, hold-price warnings, leakage and approved price changes.
+- Booking Conversion: widget demand pipeline from request to converted tenant.
+- Campaign Playbooks: signal-triggered revenue campaigns.
+- Impact Report: approved/completed decisions, rent roll movement and conversion impact.
+- Data & Integrations: setup checklist, widget installation and honest integration roadmap.
 
-## Supabase setup
-
-1. Create a Supabase project.
-2. Run SQL in `supabase/schema.sql`.
-3. Enable Email auth (or your preferred provider) in Supabase Auth.
-4. Set env vars in `.env.local`.
-
-## Run locally
+## Local Setup
 
 ```bash
 npm install
 npm run dev
 ```
 
-## Seed demo data
+Open:
+
+- App: `http://localhost:3000/app`
+- Decision Inbox: `http://localhost:3000/app/decisions`
+- Demo widget: `http://localhost:3000/widget/brussels-north-storage`
+- Demo widget redirect: `http://localhost:3000/demo/widget`
+
+## Environment Variables
+
+Copy `.env.example` to `.env.local`.
+
+Demo mode works without Supabase when:
 
 ```bash
-npm run seed:demo
+STORAGEYIELD_DEMO_MODE=true
+NEXT_PUBLIC_STORAGEYIELD_DEMO_MODE=true
 ```
 
-## Simulate core operational flow
+Production mode requires:
 
-Run an end-to-end synthetic flow (org -> facility -> inventory -> lead -> booking -> conversion) to catch regressions early:
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY` for seed/simulation scripts
+- `RESEND_API_KEY` optional
 
-```bash
-npm run simulate:flow
+Set `STORAGEYIELD_DEMO_MODE=false` and `NEXT_PUBLIC_STORAGEYIELD_DEMO_MODE=false` to require Supabase auth for `/app`.
+
+## Supabase Setup
+
+1. Create a Supabase project.
+2. Run `supabase/schema.sql`.
+3. Re-run `supabase/schema.sql` once to verify idempotency.
+4. Enable Email auth or your preferred auth provider.
+5. Create an account, then use `/onboarding` to create the first organization and facility.
+
+The schema uses RLS so users can only access organization data where they are members. The public widget can read public facility/unit-type availability and create lead/booking records, but it cannot read private actions, signals, competitors, units or reports.
+
+## Demo Mode
+
+Demo mode uses seeded data and localStorage. It is meant for live product demos and smoke tests without Supabase.
+
+Working demo loop:
+
+1. Open `/app/decisions`.
+2. Approve a pricing decision.
+3. Confirm the visible unit price changes in Pricing Lab.
+4. Open `/widget/brussels-north-storage`.
+5. Submit a booking request.
+6. Return to `/app/booking-conversion`.
+7. Move the booking through contacted/reserved/converted.
+8. Open `/app/impact-report` and confirm the report reflects approved decisions or booking conversions.
+
+To reset demo state, use Data & Integrations or clear `storageyield.demoState` in localStorage.
+
+## Production Mode
+
+Production state persists through Supabase-backed API routes:
+
+- `GET /api/storageyield/snapshot`
+- `GET /api/actions`
+- `POST /api/signals/generate`
+- `POST /api/actions/generate`
+- `POST /api/actions/approve`
+- `POST /api/actions/dismiss`
+- `POST /api/actions/complete`
+- `POST /api/bookings/convert`
+- `POST /api/unit-types/update-price`
+- `POST /api/competitors/create`
+- `POST /api/competitors/unit-types/create`
+- `POST /api/competitors/observations/create`
+- `POST /api/competitors/mappings/create`
+- `POST /api/campaigns/launch`
+
+Pricing approvals update `unit_types.current_street_rate_monthly` and create `action_events`/`events`. Booking conversion updates `booking_requests`, marks the selected unit occupied, sets current rent and logs an event.
+
+## Booking Widget
+
+Stable demo route:
+
+```text
+/widget/brussels-north-storage
 ```
 
-Use this after schema changes, booking workflow updates, or deployment checks as a feedback loop.
-
-Then open `/demo` and `/app`. Demo mode loads a seeded operator workspace without Supabase auth unless `STORAGEYIELD_DEMO_MODE=false` or `NEXT_PUBLIC_STORAGEYIELD_DEMO_MODE=false`.
-
-## Create a facility
-
-Use onboarding flow at `/onboarding`:
-
-1. Create organization
-2. Create facility (with `public_slug`)
-3. Create unit types
-4. Add units manually or by CSV import (initial setup)
-
-## Embed the widget
-
-1. Go to `/app/settings`
-2. Copy the widget URL/snippet
-3. Embed in your site:
+Embed example:
 
 ```html
 <iframe src="https://yourdomain.com/widget/brussels-north-storage" width="100%" height="720" style="border:0;border-radius:12px;"></iframe>
 ```
 
-The stable demo widget route is `/widget/brussels-north-storage`.
+The widget captures customer name, email, phone, customer type, move-in date, message and selected unit type. In production it calls the Supabase `submit_widget_booking` function. In demo mode it updates localStorage so the request appears in Booking Conversion.
 
-## Revenue decision workflow
+## Competitor Tracking
 
-The app navigation is organized around the live operating loop:
+StorageYield does not automatically decide every nearby facility is a competitor. Operators choose tracked competitors.
 
-- Decision Inbox: approval-ready pricing, campaign, competitor, discount and booking decisions.
-- Revenue Control Room: open decision value, what changed this week, money map, risk radar and data health.
-- Booking Conversion: widget requests move through contacted, reserved, converted or lost states.
-- Pricing Lab: raise, hold, discount, remap and experiment decisions by unit type.
-- Market Radar: operator-selected competitors, manual price observations and unit mappings.
-- Campaign Playbooks: signal-triggered seasonal and targeted promotions with performance tracking.
-- Impact Report: approved decisions, simulated uplift, conversion impact and risks.
-- Data & Integrations: booking capture, pricing rules, market rules and data health.
+Pilot workflow:
 
-## Track competitors
+1. Add competitor name and pricing URL.
+2. Assign competitor to one of your facilities.
+3. Mark relationship: direct, partial, benchmark only, or ignore for pricing.
+4. Add competitor unit types.
+5. Map competitor unit types to your own unit types.
+6. Enter manual price observations.
+7. Generate signals and decisions.
 
-Use `/app/competitors` to manage Market Radar. StorageYield does not assume every nearby facility is a competitor.
+Direct and partial competitors can influence decisions. Benchmark-only competitors are displayed as evidence but excluded by default. Ignored competitors are never used.
 
-Workflow:
+Automated competitor checks are not active in the MVP. Prices are manually verified during pilot setup.
 
-1. Add a tracked competitor with its website or pricing URL.
-2. Assign it to one or more of your facilities.
-3. Mark the relationship as `direct`, `partial`, `benchmark only`, or `ignore for pricing`.
-4. Add competitor unit types, such as `3-4 m² unit` or `18-22 m² business unit`.
-5. Enter manual price observations from pricing-page reviews.
-6. Map your own unit types to competitor unit types with a comparability score.
-7. Review `/app/facilities/[facilityId]/competitors` for our price vs market, freshness, and which competitors are used in revenue decisions.
+## Verification
 
-Decision rules only use fresh direct and partial competitor prices by default. Benchmark-only competitors are displayed as evidence but excluded from calculations. Ignored competitors are never used.
+Run before handing off:
 
-Automated scraping is intentionally not part of the MVP. Future extraction should be implemented per website with permission and compliance checks. Placeholder fetchers live in `src/lib/competitors/priceFetchers.ts`.
+```bash
+npm run typecheck
+npm run lint
+npm run build
+```
 
-## MVP limitations
+Manual acceptance checklist:
 
-- No Stripe/payment processing yet
-- No full PMS replacement
-- No access-control integration
-- No automated Google Sheets sync (stub only)
-- No competitor crawler automation; competitor prices are manually observed in the MVP
+- Open `/demo`.
+- Open `/app/decisions`.
+- View evidence for a pricing decision.
+- Approve a pricing decision.
+- Confirm unit type price changed.
+- Open `/app/impact-report` and confirm approved action appears.
+- Open `/widget/brussels-north-storage`.
+- Submit booking request.
+- Confirm booking appears in `/app/booking-conversion`.
+- Convert booking and assign a unit.
+- Confirm unit becomes occupied and report updates.
+- Add competitor price observation.
+- Run signal/action generation.
+- Confirm market-related decision appears.
 
-## Next steps
+Production pilot checklist:
 
-- Stripe payments and deposits
-- Google Sheet sync connector
-- PMS integrations
-- Access control integrations
-- Permission-aware competitor price extraction
-- Automated weekly emails (Resend)
-# storageyield
+- Create account/login.
+- Create organization and facility.
+- Add unit types and units.
+- Add competitor and price observation.
+- Open/install widget.
+- Submit production booking.
+- Generate signals.
+- Generate actions.
+- Approve pricing action.
+- Confirm Supabase `unit_types` row updated.
+- Convert booking.
+- Confirm Supabase `units` row updated.
+- Confirm Impact Report changes.
+
+## Known MVP Limitations
+
+- No payment processing.
+- No access control integration.
+- No tenant portal.
+- No accounting.
+- No automated competitor scraping.
+- No native PMS integrations yet.
+- No automated Google Sheets sync yet.
+- Competitor prices are manually entered during the pilot.
+- Production mode is intended for concierge pilots, not open self-serve scale.

@@ -49,7 +49,7 @@ export async function POST(request: Request) {
       address: parsed.data.address || null,
       notes: parsed.data.notes || null
     })
-    .select("id")
+    .select("*")
     .single();
   if (competitorError || !competitor) return NextResponse.json({ error: competitorError?.message ?? "Failed to create competitor" }, { status: 500 });
 
@@ -66,5 +66,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: relationshipError.message }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true, competitor_id: competitor.id });
+  return NextResponse.json({ ok: true, competitor_id: competitor.id, competitor });
 }

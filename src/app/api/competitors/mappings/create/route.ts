@@ -25,7 +25,7 @@ export async function POST(request: Request) {
   ]);
   if (!ownUnitType || !competitorUnitType) return NextResponse.json({ error: "Unit mapping does not match this facility and competitor" }, { status: 400 });
 
-  const { error } = await supabase.from("competitor_unit_mappings").upsert(
+  const { data, error } = await supabase.from("competitor_unit_mappings").upsert(
     {
       facility_id: parsed.data.facility_id,
       own_unit_type_id: parsed.data.own_unit_type_id,
@@ -35,8 +35,8 @@ export async function POST(request: Request) {
       notes: parsed.data.notes || null
     },
     { onConflict: "facility_id,own_unit_type_id,competitor_unit_type_id" }
-  );
+  ).select("*").single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, mapping: data });
 }

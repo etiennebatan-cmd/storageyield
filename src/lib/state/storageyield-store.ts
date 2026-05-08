@@ -4,7 +4,6 @@ import {
   demoSignals,
   demoActions,
   eur,
-  unitPressureRows,
   type Campaign,
   type OperatorAction,
   type OperatorBooking,
@@ -13,31 +12,64 @@ import {
 } from "@/lib/operator-demo";
 import {
   demoCompetitorPriceObservations,
+  demoCompetitorUnitMappings,
+  demoCompetitorUnitTypes,
   demoCompetitors,
+  demoFacilityCompetitors,
   demoFacilities,
   demoUnitTypes,
   demoUnits
 } from "@/lib/demo-data";
-import { detectRevenueSignals } from "@/lib/signals/engine";
-import { createRevenueActions } from "@/lib/decisions/engine";
+import { calculateMarketAverages, generateSignalsFromSnapshot } from "@/lib/signals/generate-signals";
+import { generateActionsFromSignals } from "@/lib/actions/generate-actions";
+import { buildUnitPressureRows, type UnitPressureRow } from "@/lib/pricing/unit-pressure";
+import { calculateDataHealth } from "@/lib/data-health";
 import { loadDemoState, updateDemoState, type DemoState } from "@/lib/demo-state";
-import type { Competitor, CompetitorPriceObservation, Facility, Unit, UnitType } from "@/lib/types";
+import type {
+  Competitor,
+  CompetitorPriceObservation,
+  CompetitorUnitMapping,
+  CompetitorUnitType,
+  Facility,
+  Unit,
+  UnitType
+} from "@/lib/types";
 import type { WidgetBookingInput } from "@/lib/validators/widget";
 
 type StoreResult<T> = Promise<T>;
+export type StoreMode = "demo" | "production";
+
+export type DataHealthIssue = {
+  id: string;
+  title: string;
+  severity: "low" | "medium" | "high";
+  cta: string;
+};
+
+export type DataHealthReport = {
+  score: number;
+  issues: DataHealthIssue[];
+};
 
 export type StorageYieldSnapshot = {
   facilities: Facility[];
   unitTypes: UnitType[];
   units: Unit[];
   bookings: OperatorBooking[];
+  leads: unknown[];
   signals: OperatorSignal[];
   actions: OperatorAction[];
   competitors: Competitor[];
+  competitorUnitTypes: CompetitorUnitType[];
+  competitorPriceObservations: CompetitorPriceObservation[];
+  competitorUnitMappings: CompetitorUnitMapping[];
   observations: CompetitorPriceObservation[];
   campaigns: Campaign[];
+  actionEvents: DemoState["actionEvents"];
+  weeklyReports: unknown[];
+  dataHealth: DataHealthReport;
   activity: DemoState["activity"];
-  unitRows: ReturnType<typeof unitPressureRows>;
+  unitRows: UnitPressureRow[];
   impact: Awaited<ReturnType<StorageYieldStore["getImpactReport"]>>;
 };
 
@@ -49,17 +81,22 @@ export type StorageYieldStore = {
   getSignals(): StoreResult<OperatorSignal[]>;
   getActions(): StoreResult<OperatorAction[]>;
   getCompetitors(): StoreResult<Competitor[]>;
+  getSnapshot(): StoreResult<StorageYieldSnapshot>;
   submitBooking(input: WidgetBookingInput): StoreResult<{ lead_id: string; booking_id: string }>;
   updateBookingStatus(bookingId: string, status: OperatorBooking["status"]): StoreResult<void>;
+  assignUnitToBooking(input: { booking_id: string; unit_id: string }): StoreResult<void>;
+  convertBooking(input: { booking_id: string; unit_id?: string; rent?: number; tenant_type?: OperatorBooking["customer_type"] }): StoreResult<void>;
   approveAction(actionId: string): StoreResult<void>;
   completeAction(actionId: string, outcomeNote?: string): StoreResult<void>;
   dismissAction(actionId: string): StoreResult<void>;
   updateUnitTypePrice(unitTypeId: string, price: number): StoreResult<void>;
-  addCompetitor(input: Pick<Competitor, "name" | "pricing_url" | "website_url" | "city" | "notes">): StoreResult<Competitor>;
+  addCompetitor(input: Pick<Competitor, "name" | "pricing_url" | "website_url" | "city" | "notes"> & { facility_id?: string; relationship_type?: "direct" | "partial" | "benchmark" | "ignored" }): StoreResult<Competitor>;
+  addCompetitorUnitType(input: Omit<CompetitorUnitType, "id" | "created_at">): StoreResult<CompetitorUnitType>;
   addCompetitorPriceObservation(input: Omit<CompetitorPriceObservation, "id" | "created_at">): StoreResult<CompetitorPriceObservation>;
+  mapCompetitorUnitType(input: Omit<CompetitorUnitMapping, "id" | "created_at">): StoreResult<CompetitorUnitMapping>;
   launchCampaign(template: Campaign): StoreResult<Campaign>;
-  generateSignals(): StoreResult<OperatorSignal[]>;
-  generateActions(): StoreResult<OperatorAction[]>;
+  generateSignals(input?: { organization_id?: string; facility_id?: string }): StoreResult<OperatorSignal[]>;
+  generateActions(input?: { organization_id?: string; facility_id?: string }): StoreResult<OperatorAction[]>;
   getImpactReport(): StoreResult<{
     rentRoll: number;
     expectedMonthlyUplift: number;
@@ -69,11 +106,37 @@ export type StorageYieldStore = {
     convertedBookings: number;
     actionEvents: DemoState["actionEvents"];
   }>;
-  getSnapshot(): StoreResult<StorageYieldSnapshot>;
 };
+
+function demoFacilitiesWithShape(): Facility[] {
+  return demoFacilities.map((facility) => ({
+    id: facility.id,
+    organization_id: "demo-org",
+    name: facility.name,
+    city: facility.city,
+    public_slug: facility.public_slug,
+    currency: "EUR"
+  }));
+}
 
 function normalizeObservation(row: (typeof demoCompetitorPriceObservations)[number]): CompetitorPriceObservation {
   return { ...row, observation_method: "manual", created_at: row.observed_at };
+}
+
+function normalizeCompetitorUnitType(row: (typeof demoCompetitorUnitTypes)[number]): CompetitorUnitType {
+  return {
+    ...row,
+    volume_m3: null,
+    access_type: null,
+    climate_controlled: null,
+    floor: null,
+    description: null,
+    created_at: new Date("2026-05-01T09:00:00.000Z").toISOString()
+  };
+}
+
+function normalizeCompetitorUnitMapping(row: (typeof demoCompetitorUnitMappings)[number]): CompetitorUnitMapping {
+  return { ...row, created_at: new Date("2026-05-01T09:00:00.000Z").toISOString() };
 }
 
 function demoUnitTypesWithState(state: DemoState): UnitType[] {
@@ -130,22 +193,111 @@ export function createDemoStore(): StorageYieldStore {
   const getUnits = async () => demoUnitsWithState(getState());
   const getUnitTypes = async () => demoUnitTypesWithState(getState());
   const getSignals = async () => demoSignalsWithState(getState());
-  const getObservations = async () => demoObservationsWithState(getState());
+  const getCompetitors = async () => {
+    const state = getState();
+    const customIds = new Set(state.competitors.map((competitor) => competitor.id));
+    return [...state.competitors, ...(demoCompetitors.filter((competitor) => !customIds.has(competitor.id)) as Competitor[])];
+  };
+  const getImpactReport = async () => {
+    const state = getState();
+    const actions = demoActionsWithState(state);
+    const approved = actions.filter((action) => action.status === "approved");
+    const completed = actions.filter((action) => action.status === "completed");
+    const convertedBookings = demoBookingsWithState(state).filter((booking) => booking.status === "converted").length;
+    const expectedMonthlyUplift = [...approved, ...completed].reduce((sum, action) => sum + (action.estimated_monthly_uplift ?? 0), 0);
+    const rentRoll = 34200 + Object.values(state.unitRents).reduce((sum, rent) => sum + rent, 0);
+    return {
+      rentRoll,
+      expectedMonthlyUplift,
+      simulatedUplift: Math.round(expectedMonthlyUplift * 0.46),
+      approvedDecisions: approved.length,
+      completedDecisions: completed.length,
+      convertedBookings,
+      actionEvents: state.actionEvents
+    };
+  };
+  const generateSignals = async () => {
+    const state = getState();
+    const facilities = demoFacilitiesWithShape();
+    const unitTypes = demoUnitTypesWithState(state);
+    const units = demoUnitsWithState(state);
+    const bookings = demoBookingsWithState(state);
+    const observations = demoObservationsWithState(state);
+    const generatedRaw = generateSignalsFromSnapshot({
+      facilities,
+      unitTypes,
+      units,
+      bookings,
+      competitors: await getCompetitors(),
+      facilityCompetitors: demoFacilityCompetitors,
+      competitorUnitMappings: demoCompetitorUnitMappings.map(normalizeCompetitorUnitMapping),
+      competitorPriceObservations: observations
+    });
+    const generated: OperatorSignal[] = generatedRaw.map((signal) => ({
+      id: `demo-signal-${signal.category}-${signal.unit_type_id ?? "portfolio"}`.replace(/[^a-zA-Z0-9-]/g, "-").toLowerCase(),
+      title: signal.title,
+      category: signal.category,
+      facility_id: signal.facility_id ?? "portfolio",
+      facility_name: facilities.find((facility) => facility.id === signal.facility_id)?.name ?? "Portfolio",
+      unit_type_id: signal.unit_type_id ?? undefined,
+      unit_type_name: unitTypes.find((unitType) => unitType.id === signal.unit_type_id)?.name,
+      severity: signal.severity,
+      evidence: signal.description,
+      created_at: new Date().toISOString()
+    }));
+    updateDemoState((current) => ({ ...current, signals: generated }));
+    return generated;
+  };
+  const generateActions = async () => {
+    const state = getState();
+    const unitTypes = demoUnitTypesWithState(state);
+    const units = demoUnitsWithState(state);
+    const bookings = demoBookingsWithState(state);
+    const signalObjects = generateSignalsFromSnapshot({
+      facilities: demoFacilitiesWithShape(),
+      unitTypes,
+      units,
+      bookings,
+      competitors: await getCompetitors(),
+      facilityCompetitors: demoFacilityCompetitors,
+      competitorUnitMappings: demoCompetitorUnitMappings.map(normalizeCompetitorUnitMapping),
+      competitorPriceObservations: demoObservationsWithState(state)
+    });
+    const generatedRaw = generateActionsFromSignals({ unitTypes, units, bookings, signals: signalObjects });
+    const generated: OperatorAction[] = generatedRaw.map((action) => ({
+      id: `demo-action-${action.category}-${action.unit_type_id ?? action.booking_request_id ?? "portfolio"}`.replace(/[^a-zA-Z0-9-]/g, "-").toLowerCase(),
+      title: action.title,
+      description: action.description,
+      exact_next_step: action.exact_next_step,
+      estimated_monthly_uplift: action.expected_monthly_uplift,
+      confidence: action.confidence_score,
+      priority: action.priority,
+      category: action.category,
+      source_signals: action.linked_signal_titles.map((title) => title.includes("discount") ? "discount" : title.includes("season") ? "seasonality" : title.includes("booking") ? "booking demand" : title.includes("competitor") || title.includes("market") ? "competitor" : "occupancy") as OperatorAction["source_signals"],
+      evidence: Object.entries(action.evidence).map(([key, value]) => `${key}: ${typeof value === "object" ? JSON.stringify(value) : String(value)}`),
+      linked_signal_ids: action.linked_signal_titles,
+      status: "proposed",
+      created_at: new Date().toISOString(),
+      completed_at: null,
+      facility_id: action.facility_id ?? undefined,
+      unit_type_id: action.unit_type_id ?? undefined,
+      unit_type_name: unitTypes.find((unitType) => unitType.id === action.unit_type_id)?.name,
+      recommended_street_rate: Number(action.proposed_change.recommended_rate ?? 0) || undefined
+    }));
+    updateDemoState((current) => ({ ...current, actions: generated }));
+    return generated;
+  };
 
   return {
     async getFacilities() {
-      return demoFacilities as Facility[];
+      return demoFacilitiesWithShape();
     },
     getUnitTypes,
     getUnits,
     getBookings,
     getSignals,
     getActions,
-    async getCompetitors() {
-      const state = getState();
-      const customIds = new Set(state.competitors.map((competitor) => competitor.id));
-      return [...state.competitors, ...demoCompetitors.filter((competitor) => !customIds.has(competitor.id)) as Competitor[]];
-    },
+    getCompetitors,
     async submitBooking(input) {
       const bookingId = `demo-booking-${Date.now()}`;
       const unitType = demoUnitTypes.find((item) => item.id === input.unit_type_id);
@@ -183,6 +335,46 @@ export function createDemoStore(): StorageYieldStore {
         unitStatus: nextUnit && (status === "reserved" || status === "converted") ? { ...current.unitStatus, [nextUnit]: status === "converted" ? "occupied" : "reserved" } : current.unitStatus,
         unitRents: booking && nextUnit && status === "converted" ? { ...current.unitRents, [nextUnit]: booking.quoted_monthly_rate } : current.unitRents,
         activity: [{ id: `activity-${Date.now()}`, title: `Booking ${status}`, description: booking?.customer_name ?? bookingId, type: "booking", created_at: new Date().toISOString() }, ...current.activity]
+      }));
+    },
+    async assignUnitToBooking(input) {
+      updateDemoState((current) => ({
+        ...current,
+        bookingAssignedUnits: { ...current.bookingAssignedUnits, [input.booking_id]: input.unit_id },
+        unitStatus: { ...current.unitStatus, [input.unit_id]: "reserved" },
+        activity: [
+          {
+            id: `activity-${Date.now()}`,
+            title: "Unit assigned",
+            description: `${input.unit_id} reserved for booking ${input.booking_id}`,
+            type: "booking",
+            created_at: new Date().toISOString()
+          },
+          ...current.activity
+        ]
+      }));
+    },
+    async convertBooking(input) {
+      const state = getState();
+      const booking = demoBookingsWithState(state).find((item) => item.id === input.booking_id);
+      const unitId = input.unit_id ?? state.bookingAssignedUnits[input.booking_id] ?? demoUnitsWithState(state).find((unit) => unit.unit_type_id === booking?.unit_type_id && unit.status === "available")?.id;
+      if (!booking || !unitId) throw new Error("Booking or available unit not found");
+      updateDemoState((current) => ({
+        ...current,
+        bookingStatus: { ...current.bookingStatus, [input.booking_id]: "converted" },
+        bookingAssignedUnits: { ...current.bookingAssignedUnits, [input.booking_id]: unitId },
+        unitStatus: { ...current.unitStatus, [unitId]: "occupied" },
+        unitRents: { ...current.unitRents, [unitId]: input.rent ?? booking.quoted_monthly_rate },
+        activity: [
+          {
+            id: `activity-${Date.now()}`,
+            title: "Booking converted",
+            description: `${booking.customer_name}: ${booking.unit_type_name}`,
+            type: "booking",
+            created_at: new Date().toISOString()
+          },
+          ...current.activity
+        ]
       }));
     },
     async approveAction(actionId) {
@@ -242,9 +434,19 @@ export function createDemoStore(): StorageYieldStore {
     async addCompetitorPriceObservation(input) {
       const observation: CompetitorPriceObservation = { ...input, id: `demo-observation-${Date.now()}`, created_at: new Date().toISOString() };
       updateDemoState((state) => ({ ...state, observations: [observation, ...state.observations] }));
-      await this.generateSignals();
-      await this.generateActions();
+      await generateSignals();
+      await generateActions();
       return observation;
+    },
+    async addCompetitorUnitType(input) {
+      const unitType: CompetitorUnitType = { ...input, id: `demo-competitor-unit-type-${Date.now()}`, created_at: new Date().toISOString() };
+      updateDemoState((state) => ({ ...state, activity: [{ id: `activity-${Date.now()}`, title: "Competitor unit type added", description: unitType.name, type: "competitor", created_at: new Date().toISOString() }, ...state.activity] }));
+      return unitType;
+    },
+    async mapCompetitorUnitType(input) {
+      const mapping: CompetitorUnitMapping = { ...input, id: `demo-competitor-mapping-${Date.now()}`, created_at: new Date().toISOString() };
+      updateDemoState((state) => ({ ...state, activity: [{ id: `activity-${Date.now()}`, title: "Competitor unit mapping added", description: input.own_unit_type_id, type: "competitor", created_at: new Date().toISOString() }, ...state.activity] }));
+      return mapping;
     },
     async launchCampaign(template) {
       const campaign = { ...template, id: `demo-campaign-${Date.now()}`, status: "active" as const };
@@ -255,86 +457,103 @@ export function createDemoStore(): StorageYieldStore {
       }));
       return campaign;
     },
-    async generateSignals() {
-      const state = getState();
-      const generated = detectRevenueSignals({ units: demoUnitsWithState(state), unitTypes: demoUnitTypesWithState(state), bookings: demoBookingsWithState(state), observations: demoObservationsWithState(state) });
-      updateDemoState((current) => ({ ...current, signals: generated }));
-      return generated;
-    },
-    async generateActions() {
-      const state = getState();
-      const generated = createRevenueActions({ units: demoUnitsWithState(state), unitTypes: demoUnitTypesWithState(state), bookings: demoBookingsWithState(state), signals: demoSignalsWithState(state) });
-      updateDemoState((current) => ({ ...current, actions: generated }));
-      return generated;
-    },
-    async getImpactReport() {
-      const state = getState();
-      const actions = demoActionsWithState(state);
-      const approved = actions.filter((action) => action.status === "approved");
-      const completed = actions.filter((action) => action.status === "completed");
-      const convertedBookings = demoBookingsWithState(state).filter((booking) => booking.status === "converted").length;
-      const expectedMonthlyUplift = [...approved, ...completed].reduce((sum, action) => sum + (action.estimated_monthly_uplift ?? 0), 0);
-      const rentRoll = 34200 + Object.values(state.unitRents).reduce((sum, rent) => sum + rent, 0);
-      return {
-        rentRoll,
-        expectedMonthlyUplift,
-        simulatedUplift: Math.round(expectedMonthlyUplift * 0.46),
-        approvedDecisions: approved.length,
-        completedDecisions: completed.length,
-        convertedBookings,
-        actionEvents: state.actionEvents
-      };
-    },
+    generateSignals,
+    generateActions,
+    getImpactReport,
     async getSnapshot() {
       const state = getState();
       const unitTypes = demoUnitTypesWithState(state);
       const units = demoUnitsWithState(state);
-      return {
-        facilities: demoFacilities as Facility[],
+      const observations = demoObservationsWithState(state);
+      const bookings = demoBookingsWithState(state);
+      const competitors = await getCompetitors();
+      const competitorUnitMappings = demoCompetitorUnitMappings.map(normalizeCompetitorUnitMapping);
+      const marketAverages = calculateMarketAverages({
+        facilities: demoFacilitiesWithShape(),
         unitTypes,
         units,
-        bookings: demoBookingsWithState(state),
+        bookings,
+        competitors,
+        facilityCompetitors: demoFacilityCompetitors,
+        competitorUnitMappings,
+        competitorPriceObservations: observations
+      });
+      return {
+        facilities: demoFacilitiesWithShape(),
+        unitTypes,
+        units,
+        bookings,
+        leads: [],
         signals: demoSignalsWithState(state),
         actions: demoActionsWithState(state),
-        competitors: await this.getCompetitors(),
-        observations: demoObservationsWithState(state),
+        competitors,
+        competitorUnitTypes: demoCompetitorUnitTypes.map(normalizeCompetitorUnitType),
+        competitorPriceObservations: observations,
+        competitorUnitMappings,
+        observations,
         campaigns: [...state.campaigns, ...demoCampaigns],
+        actionEvents: state.actionEvents,
+        weeklyReports: [],
+        dataHealth: calculateDataHealth({
+          unitTypes,
+          units,
+          bookings,
+          competitors,
+          competitorPriceObservations: observations,
+          competitorUnitMappings,
+          campaigns: [...state.campaigns, ...demoCampaigns]
+        }),
         activity: state.activity,
-        unitRows: unitPressureRows(units, unitTypes),
-        impact: await this.getImpactReport()
+        unitRows: buildUnitPressureRows({ facilities: demoFacilitiesWithShape(), unitTypes, units, bookings, marketAverages }),
+        impact: await getImpactReport()
       };
     }
   };
 }
 
 export function createSupabaseStore(): StorageYieldStore {
-  const notLoaded = async <T>(fallback: T) => fallback;
-  const post = async (url: string, body: unknown) => {
-    const res = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
-    if (!res.ok) throw new Error((await res.json()).error ?? "Request failed");
+  const getJson = async <T>(url: string): Promise<T> => {
+    const res = await fetch(url);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error ?? "Request failed");
+    }
     return res.json();
   };
+  const post = async <T = unknown>(url: string, body: unknown): Promise<T> => {
+    const res = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+    if (!res.ok) {
+      const responseBody = await res.json().catch(() => ({}));
+      throw new Error(responseBody.error ?? "Request failed");
+    }
+    return res.json();
+  };
+  const getSnapshot = () => getJson<StorageYieldSnapshot>("/api/storageyield/snapshot");
 
   return {
-    getFacilities: () => notLoaded([]),
-    getUnitTypes: () => notLoaded([]),
-    getUnits: () => notLoaded([]),
-    getBookings: () => notLoaded([]),
-    getSignals: () => notLoaded([]),
-    getActions: () => notLoaded([]),
-    getCompetitors: () => notLoaded([]),
+    getFacilities: async () => (await getSnapshot()).facilities,
+    getUnitTypes: async () => (await getSnapshot()).unitTypes,
+    getUnits: async () => (await getSnapshot()).units,
+    getBookings: async () => (await getSnapshot()).bookings,
+    getSignals: async () => (await getSnapshot()).signals,
+    getActions: async () => (await getSnapshot()).actions,
+    getCompetitors: async () => (await getSnapshot()).competitors,
+    getSnapshot,
     submitBooking: (input) => post("/api/widget/submit", input),
     updateBookingStatus: async (bookingId, status) => { await post("/api/bookings/status", { booking_id: bookingId, status }); },
-    approveAction: async (actionId) => { await post("/api/recommendations/status", { recommendation_id: actionId, status: "accepted" }); },
-    completeAction: async (actionId) => { await post("/api/recommendations/status", { recommendation_id: actionId, status: "completed" }); },
-    dismissAction: async (actionId) => { await post("/api/recommendations/status", { recommendation_id: actionId, status: "dismissed" }); },
-    updateUnitTypePrice: async (unitTypeId, price) => { await post("/api/unit-types/create", { unit_type_id: unitTypeId, current_street_rate_monthly: price }); },
-    addCompetitor: (input) => post("/api/competitors/create", input),
-    addCompetitorPriceObservation: (input) => post("/api/competitors/observations/create", input),
-    launchCampaign: (template) => notLoaded(template),
-    generateSignals: () => notLoaded([]),
-    generateActions: () => post("/api/recommendations/generate", {}),
-    getImpactReport: () => notLoaded({ rentRoll: 0, expectedMonthlyUplift: 0, simulatedUplift: 0, approvedDecisions: 0, completedDecisions: 0, convertedBookings: 0, actionEvents: [] }),
-    getSnapshot: async () => ({ facilities: [], unitTypes: [], units: [], bookings: [], signals: [], actions: [], competitors: [], observations: [], campaigns: [], activity: [], unitRows: [], impact: await this.getImpactReport() })
+    assignUnitToBooking: async (input) => { await post("/api/bookings/status", { booking_id: input.booking_id, selected_unit_id: input.unit_id, status: "reserved" }); },
+    convertBooking: async (input) => { await post("/api/bookings/convert", input); },
+    approveAction: async (actionId) => { await post("/api/actions/approve", { action_id: actionId }); },
+    completeAction: async (actionId, outcomeNote) => { await post("/api/actions/complete", { action_id: actionId, outcome_note: outcomeNote }); },
+    dismissAction: async (actionId) => { await post("/api/actions/dismiss", { action_id: actionId }); },
+    updateUnitTypePrice: async (unitTypeId, price) => { await post("/api/unit-types/update-price", { unit_type_id: unitTypeId, current_street_rate_monthly: price }); },
+    addCompetitor: async (input) => (await post<{ competitor: Competitor }>("/api/competitors/create", input)).competitor,
+    addCompetitorUnitType: async (input) => (await post<{ competitor_unit_type: CompetitorUnitType }>("/api/competitors/unit-types/create", input)).competitor_unit_type,
+    addCompetitorPriceObservation: async (input) => (await post<{ observation: CompetitorPriceObservation }>("/api/competitors/observations/create", input)).observation,
+    mapCompetitorUnitType: async (input) => (await post<{ mapping: CompetitorUnitMapping }>("/api/competitors/mappings/create", input)).mapping,
+    launchCampaign: async (template) => (await post<{ campaign: Campaign }>("/api/campaigns/launch", template)).campaign,
+    generateSignals: async (input) => (await post<{ signals: OperatorSignal[] }>("/api/signals/generate", input ?? {})).signals,
+    generateActions: async (input) => (await post<{ actions: OperatorAction[] }>("/api/actions/generate", input ?? {})).actions,
+    getImpactReport: async () => (await getSnapshot()).impact
   };
 }
