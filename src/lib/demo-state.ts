@@ -3,7 +3,11 @@ import type { Competitor, CompetitorPriceObservation } from "@/lib/types";
 
 export type DemoState = {
   unitTypePrices: Record<string, number>;
+  unitStatus: Record<string, string>;
+  unitRents: Record<string, number>;
+  bookingAssignedUnits: Record<string, string>;
   actionStatus: Record<string, string>;
+  actionOutcomeNotes: Record<string, string>;
   bookingStatus: Record<string, string>;
   widgetInstalled: boolean;
   onboardingSteps: Record<string, boolean>;
@@ -14,6 +18,7 @@ export type DemoState = {
   observations: CompetitorPriceObservation[];
   signals: OperatorSignal[];
   completedActionIds: string[];
+  actionEvents: Array<{ id: string; action_id: string; event_type: string; payload: Record<string, unknown>; created_at: string }>;
   activity: Array<{ id: string; title: string; description: string; type: string; created_at: string }>;
 };
 
@@ -21,7 +26,11 @@ const STORAGE_KEY = "storageyield.demoState";
 
 const defaultState: DemoState = {
   unitTypePrices: {},
+  unitStatus: {},
+  unitRents: {},
+  bookingAssignedUnits: {},
   actionStatus: {},
+  actionOutcomeNotes: {},
   bookingStatus: {},
   widgetInstalled: false,
   onboardingSteps: {},
@@ -32,6 +41,7 @@ const defaultState: DemoState = {
   observations: [],
   signals: [],
   completedActionIds: [],
+  actionEvents: [],
   activity: []
 };
 
@@ -45,7 +55,11 @@ export function loadDemoState(): DemoState {
       ...defaultState,
       ...parsed,
       unitTypePrices: parsed.unitTypePrices ?? {},
+      unitStatus: parsed.unitStatus ?? {},
+      unitRents: parsed.unitRents ?? {},
+      bookingAssignedUnits: parsed.bookingAssignedUnits ?? {},
       actionStatus: parsed.actionStatus ?? {},
+      actionOutcomeNotes: parsed.actionOutcomeNotes ?? {},
       bookingStatus: parsed.bookingStatus ?? {},
       widgetInstalled: parsed.widgetInstalled ?? false,
       onboardingSteps: parsed.onboardingSteps ?? {},
@@ -56,6 +70,7 @@ export function loadDemoState(): DemoState {
       observations: parsed.observations ?? [],
       signals: parsed.signals ?? [],
       completedActionIds: parsed.completedActionIds ?? [],
+      actionEvents: parsed.actionEvents ?? [],
       activity: parsed.activity ?? []
     };
   } catch {

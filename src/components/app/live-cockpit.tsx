@@ -363,7 +363,13 @@ function useRevenueDemo() {
     }));
   }, [state.bookings, state.bookingStatus]);
 
-  const unitRows = useMemo(() => unitPressureRows().map((row) => {
+  const effectiveUnits = useMemo(() => demoUnits.map((unit) => ({
+    ...unit,
+    status: (state.unitStatus[unit.id] ?? unit.status) as typeof unit.status,
+    current_rent_monthly: state.unitRents[unit.id] ?? unit.current_rent_monthly
+  })), [state.unitRents, state.unitStatus]);
+
+  const unitRows = useMemo(() => unitPressureRows(effectiveUnits, demoUnitTypes).map((row) => {
     const rate = state.unitTypePrices[row.id] ?? row.street_rate;
     return {
       ...row,
@@ -371,7 +377,7 @@ function useRevenueDemo() {
       gap: row.market_avg !== null ? row.market_avg - rate : null,
       rent_per_m2: rate / (demoUnitTypes.find((unitType) => unitType.id === row.id)?.size_m2 ?? 1)
     };
-  }), [state.unitTypePrices]);
+  }), [effectiveUnits, state.unitTypePrices]);
 
   const campaigns = useMemo(() => {
     const customIds = new Set(state.campaigns.map((campaign) => campaign.id));
@@ -402,16 +408,27 @@ function useRevenueDemo() {
     }));
   };
 
-  const setActionStatus = (action: OperatorAction, status: ActionStatus) => {
+  const setActionStatus = (action: OperatorAction, status: ActionStatus, outcomeNote?: string) => {
     persist((current) => ({
       ...current,
       actionStatus: { ...current.actionStatus, [action.id]: status },
       completedActionIds: status === "completed" ? Array.from(new Set([...current.completedActionIds, action.id])) : current.completedActionIds,
+      actionOutcomeNotes: outcomeNote ? { ...current.actionOutcomeNotes, [action.id]: outcomeNote } : current.actionOutcomeNotes,
+      actionEvents: [
+        {
+          id: `event-${Date.now()}`,
+          action_id: action.id,
+          event_type: `decision_${status}`,
+          payload: { outcome_note: outcomeNote ?? null, expected_monthly_uplift: action.estimated_monthly_uplift },
+          created_at: new Date().toISOString()
+        },
+        ...current.actionEvents
+      ],
       activity: [
-        { id: `activity-${Date.now()}`, title: `Action ${status}`, description: action.title, type: "action", created_at: new Date().toISOString() },
+        { id: `activity-${Date.now()}`, title: `Decision ${status}`, description: action.title, type: "action", created_at: new Date().toISOString() },
         ...current.activity
       ].slice(0, 16)
-    }), status === "approved" ? "Action approved" : status === "completed" ? "Action completed and added to report" : "Action updated");
+    }), status === "approved" ? "Decision approved" : status === "completed" ? "Decision completed and added to Impact Report" : status === "rejected" ? "Decision rejected" : "Decision updated");
   };
 
   const approvePrice = (action: OperatorAction) => {
@@ -424,6 +441,16 @@ function useRevenueDemo() {
       ...current,
       unitTypePrices: { ...current.unitTypePrices, [action.unit_type_id!]: recommendedRate },
       actionStatus: { ...current.actionStatus, [action.id]: "approved" },
+      actionEvents: [
+        {
+          id: `event-${Date.now()}`,
+          action_id: action.id,
+          event_type: "price_decision_approved",
+          payload: { unit_type_id: action.unit_type_id, approved_rate: recommendedRate, expected_monthly_uplift: action.estimated_monthly_uplift },
+          created_at: new Date().toISOString()
+        },
+        ...current.actionEvents
+      ],
       activity: [
         {
           id: `activity-${Date.now()}`,
@@ -434,13 +461,20 @@ function useRevenueDemo() {
         },
         ...current.activity
       ].slice(0, 16)
-    }), `Price approved: ${action.unit_type_name} to ${eur(recommendedRate)}`);
+    }), `Price decision approved: ${action.unit_type_name} to ${eur(recommendedRate)}`);
   };
 
   const setBookingStatus = (booking: OperatorBooking, status: OperatorBooking["status"]) => {
+    const assignedUnit = state.bookingAssignedUnits[booking.id];
+    const nextUnit = assignedUnit ?? effectiveUnits.find((unit) => unit.unit_type_id === booking.unit_type_id && unit.status === "available")?.id;
     persist((current) => ({
       ...current,
       bookingStatus: { ...current.bookingStatus, [booking.id]: status },
+      bookingAssignedUnits: nextUnit && (status === "reserved" || status === "converted") ? { ...current.bookingAssignedUnits, [booking.id]: nextUnit } : current.bookingAssignedUnits,
+      unitStatus: nextUnit && (status === "reserved" || status === "converted")
+        ? { ...current.unitStatus, [nextUnit]: status === "converted" ? "occupied" : "reserved" }
+        : current.unitStatus,
+      unitRents: nextUnit && status === "converted" ? { ...current.unitRents, [nextUnit]: booking.quoted_monthly_rate } : current.unitRents,
       activity: [
         {
           id: `activity-${Date.now()}`,
@@ -469,7 +503,7 @@ function useRevenueDemo() {
     return { score: 42, issues: issues.slice(0, 5) };
   }, [bookings, observations]);
 
-  const convertedRent = bookings.filter((booking) => booking.status === "converted").reduce((sum, booking) => sum + booking.quoted_monthly_rate, 0);
+  const convertedRent = Object.values(state.unitRents).reduce((sum, rent) => sum + rent, 0);
 
   return {
     state,
@@ -484,6 +518,7 @@ function useRevenueDemo() {
     dataHealth,
     toasts,
     convertedRent,
+    effectiveUnits,
     toast,
     persist,
     addActivity,
@@ -636,7 +671,7 @@ function weekChanges(workspace: RevenueWorkspace) {
 
 function openDecisionValue(decisions: RevenueDecision[]) {
   return decisions
-    .filter((decision) => !["completed", "dismissed", "converted", "lost"].includes(decision.status))
+    .filter((decision) => !["completed", "rejected", "dismissed", "converted", "lost"].includes(decision.status))
     .reduce((sum, decision) => sum + (decision.expectedMonthlyUplift ?? 0), 0);
 }
 
@@ -684,12 +719,14 @@ function DecisionCard({
   onApprove,
   onEdit,
   onReject,
+  onComplete,
   onEvidence
 }: {
   decision: RevenueDecision;
   onApprove: () => void;
   onEdit: () => void;
   onReject: () => void;
+  onComplete: () => void;
   onEvidence: () => void;
 }) {
   return (
@@ -717,6 +754,7 @@ function DecisionCard({
       <div className="mt-5 flex flex-wrap gap-3">
         <Button onClick={onApprove}>Approve</Button>
         <Button onClick={onEdit} variant="secondary">Edit</Button>
+        {decision.action && ["approved", "active"].includes(decision.status) ? <Button onClick={onComplete} variant="secondary">Complete</Button> : null}
         <Button onClick={onReject} variant="ghost">Reject</Button>
         <Button onClick={onEvidence} variant="secondary">View evidence</Button>
       </div>
@@ -748,7 +786,7 @@ export function DecisionInboxWorkspace() {
   };
 
   const rejectDecision = (decision: RevenueDecision) => {
-    if (decision.action) workspace.setActionStatus(decision.action, "dismissed");
+    if (decision.action) workspace.setActionStatus(decision.action, "rejected");
     else if (decision.booking) workspace.setBookingStatus(decision.booking, "lost");
     else workspace.persist((current) => ({
       ...current,
@@ -816,6 +854,9 @@ export function DecisionInboxWorkspace() {
             decision={decision}
             key={decision.id}
             onApprove={() => approveDecision(decision)}
+            onComplete={() => {
+              if (decision.action) workspace.setActionStatus(decision.action, "completed", window.prompt("Outcome note (optional)") ?? undefined);
+            }}
             onEdit={() => workspace.toast("Decision draft opened for editing")}
             onEvidence={() => setSelected(decision)}
             onReject={() => rejectDecision(decision)}
@@ -949,7 +990,7 @@ export function ActionCenterWorkspace() {
   const [showHealth, setShowHealth] = useState(false);
   const kpis = actionCenterKpis();
   const primary = workspace.actions.find((action) => action.id === "act-raise-brussels-3") ?? workspace.actions[0];
-  const activeActions = workspace.actions.filter((action) => !["completed", "dismissed"].includes(action.status));
+  const activeActions = workspace.actions.filter((action) => !["completed", "rejected", "dismissed"].includes(action.status));
   const visibleActions = activeActions.filter((action) => selectedMoney === "pricing" ? action.category === "pricing" : selectedMoney === "discount" ? action.category === "discount_recovery" : selectedMoney === "arrears" ? action.category === "collections" : selectedMoney === "booking" ? action.category === "booking_follow_up" || action.source_signals.includes("booking demand") : true);
   const bookingNeedsAction = workspace.bookings.filter((booking) => ["requested", "contacted"].includes(booking.status));
   const underMarket = workspace.unitRows.filter((row) => (row.gap ?? 0) > 0);
@@ -992,7 +1033,7 @@ export function ActionCenterWorkspace() {
               <div className="mt-7 flex flex-wrap gap-3">
                 <Button onClick={() => workspace.approvePrice(primary)}><Zap className="h-4 w-4" />Approve price</Button>
                 <Button onClick={() => setSelectedAction(primary)} variant="secondary">Review evidence</Button>
-                <Button onClick={() => workspace.setActionStatus(primary, "dismissed")} variant="ghost">Dismiss</Button>
+                <Button onClick={() => workspace.setActionStatus(primary, "rejected")} variant="ghost">Reject</Button>
               </div>
             </div>
             <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.06] p-5">
@@ -1085,7 +1126,7 @@ export function ActionCenterWorkspace() {
                     <div className="flex flex-wrap gap-2 lg:justify-end">
                       <Button onClick={() => action.category === "pricing" ? workspace.approvePrice(action) : workspace.setActionStatus(action, "approved")} variant="secondary">Approve</Button>
                       <Button onClick={() => setSelectedAction(action)} variant="ghost">Review</Button>
-                      <Button onClick={() => workspace.setActionStatus(action, "completed")} variant="ghost">Complete</Button>
+                      <Button onClick={() => workspace.setActionStatus(action, "completed", window.prompt("Outcome note (optional)") ?? undefined)} variant="ghost">Complete</Button>
                     </div>
                   </div>
                 </div>
@@ -1184,7 +1225,7 @@ export function ActionCenterWorkspace() {
               setSelectedAction(null);
             }}
             onComplete={() => {
-              workspace.setActionStatus(selectedAction, "completed");
+              workspace.setActionStatus(selectedAction, "completed", window.prompt("Outcome note (optional)") ?? undefined);
               setSelectedAction(null);
             }}
           />
@@ -1824,7 +1865,7 @@ export function ReportsWorkspace() {
   const workspace = useRevenueDemo();
   const completed = workspace.actions.filter((action) => action.status === "completed");
   const approved = workspace.actions.filter((action) => action.status === "approved");
-  const dismissed = workspace.actions.filter((action) => action.status === "dismissed");
+  const dismissed = workspace.actions.filter((action) => action.status === "dismissed" || action.status === "rejected");
   const expectedUplift = [...approved, ...completed].reduce((sum, action) => sum + (action.estimated_monthly_uplift ?? 0), 0);
   const simulatedUplift = Math.round(expectedUplift * 0.46) + workspace.convertedRent;
   const rentRoll = 34200 + workspace.convertedRent;
