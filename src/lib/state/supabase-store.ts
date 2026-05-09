@@ -7,7 +7,9 @@ export function createSupabaseStore(): StorageYieldStore {
     const res = await fetch(url);
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      throw new Error(body.error ?? "Request failed");
+      if (res.status === 401) throw new Error(body.error ?? "Authentication required");
+      if (res.status === 403) throw new Error(body.error ?? "Organization access required");
+      throw new Error(body.error ?? `Request failed (${res.status})`);
     }
     return res.json();
   };
@@ -15,7 +17,9 @@ export function createSupabaseStore(): StorageYieldStore {
     const res = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
     if (!res.ok) {
       const responseBody = await res.json().catch(() => ({}));
-      throw new Error(responseBody.error ?? "Request failed");
+      if (res.status === 401) throw new Error(responseBody.error ?? "Authentication required");
+      if (res.status === 403) throw new Error(responseBody.error ?? "Organization access required");
+      throw new Error(responseBody.error ?? `Request failed (${res.status})`);
     }
     return res.json();
   };

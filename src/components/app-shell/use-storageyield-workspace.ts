@@ -12,6 +12,15 @@ function shouldUseDemoStore() {
 }
 
 function defaultSnapshot(): StorageYieldSnapshot {
+  const emptyMoneyMap = {
+    pricingGap: 0,
+    vacancyDrag: 0,
+    discountLeakage: 0,
+    arrearsRisk: 0,
+    leadFollowUpLoss: 0,
+    totalMoneyLeftOnTable: 0,
+    items: []
+  };
   return {
     facilities: [],
     unitTypes: [],
@@ -31,7 +40,24 @@ function defaultSnapshot(): StorageYieldSnapshot {
     dataHealth: { score: 0, issues: [] },
     activity: [],
     unitRows: [],
-    impact: { rentRoll: 0, expectedMonthlyUplift: 0, simulatedUplift: 0, approvedDecisions: 0, completedDecisions: 0, convertedBookings: 0, actionEvents: [] }
+    moneyMap: emptyMoneyMap,
+    impact: {
+      rentRoll: 0,
+      expectedMonthlyUplift: 0,
+      simulatedUplift: 0,
+      approvedDecisions: 0,
+      completedDecisions: 0,
+      convertedBookings: 0,
+      actionEvents: [],
+      completedExpectedUplift: 0,
+      newMonthlyRentFromConvertedBookings: 0,
+      priceChangesApproved: [],
+      convertedBookingRows: [],
+      campaignsLaunched: [],
+      discountRecoveryActions: [],
+      competitorRefreshActions: [],
+      actionTimeline: []
+    }
   };
 }
 

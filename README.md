@@ -64,9 +64,20 @@ By default `/app/*` uses production mode and loads Supabase-backed state. It doe
 2. Run `supabase/schema.sql`.
 3. Re-run `supabase/schema.sql` once to verify idempotency.
 4. Enable Email auth or your preferred auth provider.
-5. Create an account, then use `/onboarding` to create the first organization and facility.
+5. In Supabase Auth URL settings, allow your local/site URL and use `https://yourdomain.com/auth/callback` or `http://localhost:3000/auth/callback` as the email redirect target.
+6. Create an account, confirm email if required, then use `/onboarding` to create the first organization, facility, unit types, units and initial competitors.
 
 The schema uses RLS so users can only access organization data where they are members. The public widget can read public facility/unit-type availability and create lead/booking records, but it cannot read private actions, signals, competitors, units or reports.
+
+## Auth And First Workspace Flow
+
+Production login is intentionally separate from demo mode:
+
+1. `/signup` creates the Supabase auth user and sends confirmation to `/auth/callback`.
+2. `/auth/callback` exchanges the auth code for a session, upserts the current user profile and routes first users to `/onboarding`.
+3. `/login` verifies credentials, refreshes the session, checks whether an organization exists and routes to `/onboarding` or `/app/decisions`.
+4. `/app/*` requires an authenticated user and an organization unless `?demo=1` is present.
+5. `/onboarding` creates the first production workspace with unit types, units and optional selected competitors, then opens `/app/data-integrations` so the operator can see setup progress honestly.
 
 ## Demo Mode
 
@@ -151,6 +162,16 @@ npm run build
 npm run test:acceptance
 ```
 
+`npm run test:acceptance` runs blocker-focused pure checks first, then the browser demo flow. The pure checks cover evidence normalization, Money Map calculations, stable action generation keys, booking lead scoring, impact reporting, onboarding honesty and removal of the legacy signal engine.
+
+Optional production smoke check with Supabase env vars:
+
+```bash
+npm run test:production-smoke
+```
+
+If this reports an RLS recursion error on `organization_members`, rerun the latest `supabase/schema.sql` in the target Supabase project. The current schema uses non-recursive membership policies required by the login/workspace guard.
+
 Manual acceptance checklist:
 
 - Open `/demo`.
@@ -170,19 +191,20 @@ Manual acceptance checklist:
 
 Production pilot checklist:
 
-- Create account/login.
-- Create organization and facility.
-- Add unit types and units.
-- Add competitor and price observation.
-- Open/install widget.
-- Submit production booking.
-- Generate signals.
-- Generate actions.
-- Approve pricing action.
-- Confirm Supabase `unit_types` row updated.
-- Convert booking.
-- Confirm Supabase `units` row updated.
+- Configure Supabase env vars and run `supabase/schema.sql`.
+- Create account at `/signup`.
+- Confirm email if required and return through `/auth/callback`.
+- Log in and confirm redirect to `/onboarding`.
+- Complete onboarding with organization, facility, unit types, unit counts and at least one competitor.
+- Confirm redirect to `/app/data-integrations` and verify setup/data health reflects the records created.
+- Generate signals/actions.
+- Approve pricing action and confirm Supabase `unit_types` row updated.
+- Open the production widget for the facility public slug.
+- Submit production booking and confirm it appears in Booking Conversion.
+- Convert booking and confirm Supabase `booking_requests` and `units` rows update.
 - Confirm Impact Report changes.
+
+The full step-by-step production checklist lives in `scripts/acceptance-production-checklist.md`.
 
 ## Known MVP Limitations
 

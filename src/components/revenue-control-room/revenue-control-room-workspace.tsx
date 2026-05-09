@@ -11,13 +11,7 @@ export function RevenueControlRoomWorkspace() {
   const actions = workspace.snapshot.actions;
   const urgent = actions.find((action) => action.status === "proposed") ?? actions[0];
   const bookingsNeedAction = workspace.snapshot.bookings.filter((booking) => ["requested", "contacted"].includes(booking.status)).length;
-  const moneyMap = [
-    { id: "pricing", label: "Pricing gap", value: workspace.snapshot.unitRows.filter((row) => (row.gap ?? 0) > 0).reduce((sum, row) => sum + (row.gap ?? 0) * Math.max(1, row.units - row.occupied), 0), copy: "Unit types priced below selected competitors." },
-    { id: "vacancy", label: "Vacancy drag", value: 880, copy: "Low-occupancy units needing demand or repositioning." },
-    { id: "discount", label: "Discount leakage", value: workspace.snapshot.units.reduce((sum, unit) => sum + Number(unit.discount_monthly ?? 0), 0), copy: "Legacy discounts still reducing rent roll." },
-    { id: "arrears", label: "Arrears risk", value: workspace.snapshot.units.reduce((sum, unit) => sum + Number(unit.arrears_amount ?? 0), 0), copy: "Open balances requiring collection follow-up." },
-    { id: "booking", label: "Lead follow-up loss", value: bookingsNeedAction * 140, copy: "Booking requests that can still convert this week." }
-  ];
+  const moneyMap = workspace.snapshot.moneyMap.items;
 
   return (
     <div className="space-y-7">
@@ -43,7 +37,7 @@ export function RevenueControlRoomWorkspace() {
           </section>
         ) : null}
         <div className="grid gap-4 md:grid-cols-5">
-          <ImpactStat icon={Euro} label="Money left on table" tone="green" value={`${formatEur(moneyMap.reduce((sum, item) => sum + item.value, 0))}/mo`} />
+          <ImpactStat icon={Euro} label="Money left on table" tone="green" value={`${formatEur(workspace.snapshot.moneyMap.totalMoneyLeftOnTable)}/mo`} />
           <ImpactStat icon={Clock} label="Bookings need action" tone="amber" value={bookingsNeedAction} />
           <ImpactStat icon={Radar} label="Competitor moves" tone="blue" value={workspace.snapshot.observations.length} />
           <ImpactStat icon={AlertTriangle} label="Arrears risk" tone="red" value={formatEur(moneyMap.find((item) => item.id === "arrears")?.value ?? 0)} />
@@ -52,14 +46,14 @@ export function RevenueControlRoomWorkspace() {
         <section className="card p-6">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div><h2 className="text-2xl font-semibold text-slate-950">Money Map</h2><p className="mt-1 text-slate-600">Click leakage sources in pilot reviews to explain what decisions are blocking revenue.</p></div>
-            <p className="text-4xl font-semibold text-slate-950">{formatEur(moneyMap.reduce((sum, item) => sum + item.value, 0))}<span className="text-base text-slate-500">/mo</span></p>
+            <p className="text-4xl font-semibold text-slate-950">{formatEur(workspace.snapshot.moneyMap.totalMoneyLeftOnTable)}<span className="text-base text-slate-500">/mo</span></p>
           </div>
           <div className="mt-6 grid gap-3 lg:grid-cols-5">
             {moneyMap.map((item) => (
               <div className="rounded-3xl border border-slate-200 p-5" key={item.id}>
                 <p className="text-sm font-semibold text-slate-500">{item.label}</p>
                 <p className="mt-3 text-3xl font-semibold text-slate-950">{formatEur(item.value)}</p>
-                <p className="mt-3 text-sm text-slate-600">{item.copy}</p>
+                <p className="mt-3 text-sm text-slate-600">{item.insufficientData ? "Insufficient unit data to calculate this yet." : item.copy}</p>
               </div>
             ))}
           </div>

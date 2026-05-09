@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "seed:demo": "tsx scripts/seed-demo.ts",
     "simulate:flow": "node --env-file=.env.local scripts/simulate-flow.mjs",
-    "test:acceptance": "node scripts/acceptance-demo-flow.mjs"
+    "test:acceptance": "tsx scripts/pilot-blocker-checks.ts && node scripts/acceptance-demo-flow.mjs",
+    "test:production-smoke": "node --env-file=.env.local scripts/production-smoke.mjs"
   },
   "keywords": [],
   "author": "",
@@ -45,6 +46,7 @@
     "playwright-core": "^1.57.0",
     "postcss": "^8.5.14",
     "tailwindcss": "^3.4.17",
+    "tsx": "^4.21.0",
     "typescript": "^5.7.3"
   }
 }

@@ -22,6 +22,10 @@ export function calculateDataHealth(input: DataHealthInput): DataHealthReport {
   const now = input.now ?? new Date();
   const issues: DataHealthIssue[] = [];
 
+  if (!input.unitTypes.length) issues.push(issue("no-unit-types", "No unit types have been added yet", "high", "Add unit types"));
+  if (!input.units.length) issues.push(issue("no-units", "No units have been added yet", "high", "Bulk-create units"));
+  if (!input.competitors.length) issues.push(issue("no-competitors", "No tracked competitors have been added yet", "medium", "Add selected competitors"));
+
   const missingPrices = input.unitTypes.filter((unitType) => !unitType.current_street_rate_monthly || unitType.current_street_rate_monthly <= 0);
   if (missingPrices.length) issues.push(issue("missing-prices", `${missingPrices.length} unit types are missing street rates`, "high", "Add street rates"));
 

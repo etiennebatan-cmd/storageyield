@@ -14,6 +14,8 @@ import { buildCompetitorEvidenceByUnitType, summarizeCompetitorSignals } from "@
 import { demoCompetitorEvidenceRows } from "@/lib/competitors/demo";
 import { Unit, UnitType } from "@/lib/types";
 
+export type ActionEvidence = Record<string, unknown> | string[] | string | null | undefined;
+
 export type SignalCategory =
   | "competitor_price_up"
   | "competitor_price_down"
@@ -57,7 +59,7 @@ export interface OperatorAction {
   priority: Priority;
   category: ActionCategory;
   source_signals: Array<"booking demand" | "competitor" | "occupancy" | "discount" | "seasonality" | "arrears">;
-  evidence: string[];
+  evidence: ActionEvidence;
   linked_signal_ids: string[];
   status: ActionStatus;
   created_at: string;
@@ -71,6 +73,7 @@ export interface OperatorAction {
 export interface OperatorBooking {
   id: string;
   customer_name: string;
+  customer_phone?: string | null;
   customer_type: "private" | "business" | "unknown";
   unit_type_id: string;
   unit_type_name: string;

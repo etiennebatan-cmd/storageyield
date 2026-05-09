@@ -23,6 +23,8 @@ import { calculateMarketAverages, generateSignalsFromSnapshot } from "@/lib/sign
 import { generateActionsFromSignals } from "@/lib/actions/generate-actions";
 import { buildUnitPressureRows } from "@/lib/pricing/unit-pressure";
 import { calculateDataHealth } from "@/lib/data-health";
+import { calculateImpactReport } from "@/lib/impact/impact-report";
+import { calculateMoneyMap } from "@/lib/impact/money-map";
 import { loadDemoState, updateDemoState, type DemoState } from "@/lib/demo-state";
 import type {
   Competitor,
@@ -128,20 +130,14 @@ export function createDemoStore(): StorageYieldStore {
   const getImpactReport = async () => {
     const state = getState();
     const actions = demoActionsWithState(state);
-    const approved = actions.filter((action) => action.status === "approved");
-    const completed = actions.filter((action) => action.status === "completed");
-    const convertedBookings = demoBookingsWithState(state).filter((booking) => booking.status === "converted").length;
-    const expectedMonthlyUplift = [...approved, ...completed].reduce((sum, action) => sum + (action.estimated_monthly_uplift ?? 0), 0);
-    const rentRoll = 34200 + Object.values(state.unitRents).reduce((sum, rent) => sum + rent, 0);
-    return {
-      rentRoll,
-      expectedMonthlyUplift,
-      simulatedUplift: Math.round(expectedMonthlyUplift * 0.46),
-      approvedDecisions: approved.length,
-      completedDecisions: completed.length,
-      convertedBookings,
-      actionEvents: state.actionEvents
-    };
+    return calculateImpactReport({
+      actions,
+      actionEvents: state.actionEvents,
+      bookings: demoBookingsWithState(state),
+      units: demoUnitsWithState(state),
+      unitTypes: demoUnitTypesWithState(state),
+      campaigns: [...state.campaigns, ...demoCampaigns]
+    });
   };
   const generateSignals = async () => {
     const state = getState();
@@ -201,7 +197,7 @@ export function createDemoStore(): StorageYieldStore {
       priority: action.priority,
       category: action.category,
       source_signals: action.linked_signal_titles.map((title) => title.includes("discount") ? "discount" : title.includes("season") ? "seasonality" : title.includes("booking") ? "booking demand" : title.includes("competitor") || title.includes("market") ? "competitor" : "occupancy") as OperatorAction["source_signals"],
-      evidence: Object.entries(action.evidence).map(([key, value]) => `${key}: ${typeof value === "object" ? JSON.stringify(value) : String(value)}`),
+      evidence: action.evidence,
       linked_signal_ids: action.linked_signal_titles,
       status: "proposed",
       created_at: new Date().toISOString(),
@@ -242,6 +238,7 @@ export function createDemoStore(): StorageYieldStore {
         source: "booking widget",
         status: "requested",
         created_at: new Date().toISOString(),
+        customer_phone: input.customer_phone ?? null,
         next_action: "Contact customer and confirm availability"
       };
       updateDemoState((state) => ({
@@ -307,11 +304,14 @@ export function createDemoStore(): StorageYieldStore {
     async approveAction(actionId) {
       const state = getState();
       const action = demoActionsWithState(state).find((item) => item.id === actionId);
+      const unitType = action?.unit_type_id ? demoUnitTypesWithState(state).find((item) => item.id === action.unit_type_id) : undefined;
+      const oldPrice = unitType?.current_street_rate_monthly ?? null;
+      const newPrice = action?.recommended_street_rate ?? null;
       updateDemoState((current) => ({
         ...current,
         actionStatus: { ...current.actionStatus, [actionId]: "approved" },
         unitTypePrices: action?.unit_type_id && action.recommended_street_rate ? { ...current.unitTypePrices, [action.unit_type_id]: action.recommended_street_rate } : current.unitTypePrices,
-        actionEvents: [event(actionId, "decision_approved", { expected_monthly_uplift: action?.estimated_monthly_uplift ?? null }), ...current.actionEvents],
+        actionEvents: [event(actionId, "decision_approved", { expected_monthly_uplift: action?.estimated_monthly_uplift ?? null, old_price: oldPrice, new_price: newPrice }), ...current.actionEvents],
         activity: [{ id: `activity-${Date.now()}`, title: "Decision approved", description: action?.title ?? actionId, type: "action", created_at: new Date().toISOString() }, ...current.activity]
       }));
     },
@@ -405,6 +405,7 @@ export function createDemoStore(): StorageYieldStore {
         competitorUnitMappings,
         competitorPriceObservations: observations
       });
+      const moneyMap = calculateMoneyMap({ unitTypes, units, bookings });
       return {
         facilities: demoFacilitiesWithShape(),
         unitTypes,
@@ -432,6 +433,7 @@ export function createDemoStore(): StorageYieldStore {
         }),
         activity: state.activity,
         unitRows: buildUnitPressureRows({ facilities: demoFacilitiesWithShape(), unitTypes, units, bookings, marketAverages }),
+        moneyMap,
         impact: await getImpactReport()
       };
     }

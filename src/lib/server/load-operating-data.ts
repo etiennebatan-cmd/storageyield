@@ -89,6 +89,7 @@ export async function loadOperatingData(input: LoadInput) {
       source: "booking widget",
       status: mapBookingStatus(booking.status),
       created_at: booking.created_at,
+      customer_phone: booking.customer_phone ?? null,
       next_action: booking.status === "requested" ? "Contact customer and confirm availability" : "Track conversion outcome"
     } satisfies OperatorBooking;
   });

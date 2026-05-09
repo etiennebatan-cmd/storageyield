@@ -1,6 +1,7 @@
 import type { GeneratedSignal } from "@/lib/signals/generate-signals";
 import type { Unit, UnitType } from "@/lib/types";
 import type { OperatorBooking, OperatorAction } from "@/lib/operator-demo";
+import { getBookingNextAction } from "@/lib/bookings/lead-scoring";
 
 export type GeneratedAction = {
   title: string;
@@ -16,6 +17,7 @@ export type GeneratedAction = {
   facility_id: string | null;
   unit_type_id: string | null;
   booking_request_id?: string | null;
+  generation_key: string;
   evidence: Record<string, unknown>;
   proposed_change: Record<string, unknown>;
   linked_signal_titles: string[];
@@ -30,6 +32,23 @@ type GenerateActionsInput = {
 
 function signalsFor(input: GenerateActionsInput, unitTypeId: string, category?: GeneratedSignal["category"]) {
   return input.signals.filter((signal) => signal.unit_type_id === unitTypeId && (!category || signal.category === category));
+}
+
+export function buildActionGenerationKey(input: {
+  type: string;
+  facility_id?: string | null;
+  unit_type_id?: string | null;
+  booking_request_id?: string | null;
+  campaign_id?: string | null;
+  template?: string | null;
+  competitor_id?: string | null;
+}) {
+  return [
+    input.type,
+    input.facility_id ?? "portfolio",
+    input.unit_type_id ?? "all-unit-types",
+    input.booking_request_id ?? input.campaign_id ?? input.template ?? input.competitor_id ?? "scope"
+  ].join(":");
 }
 
 export function generateActionsFromSignals(input: GenerateActionsInput): GeneratedAction[] {
@@ -61,6 +80,7 @@ export function generateActionsFromSignals(input: GenerateActionsInput): Generat
         recommendation: "approve",
         facility_id: unitType.facility_id,
         unit_type_id: unitType.id,
+        generation_key: buildActionGenerationKey({ type: "pricing_raise", facility_id: unitType.facility_id, unit_type_id: unitType.id }),
         evidence: { ...underMarket.evidence, ...highDemand.evidence, occupancy },
         proposed_change: { kind: "price_change", current_rate: unitType.current_street_rate_monthly, recommended_rate: suggestedRate, applies_to: "new_customers_only" },
         linked_signal_titles: [highDemand.title, underMarket.title]
@@ -81,6 +101,7 @@ export function generateActionsFromSignals(input: GenerateActionsInput): Generat
         recommendation: "hold",
         facility_id: unitType.facility_id,
         unit_type_id: unitType.id,
+        generation_key: buildActionGenerationKey({ type: "pricing_hold", facility_id: unitType.facility_id, unit_type_id: unitType.id }),
         evidence: overMarket.evidence,
         proposed_change: { kind: "hold_price", current_rate: unitType.current_street_rate_monthly },
         linked_signal_titles: [overMarket.title]
@@ -101,6 +122,7 @@ export function generateActionsFromSignals(input: GenerateActionsInput): Generat
         recommendation: "review",
         facility_id: unitType.facility_id,
         unit_type_id: unitType.id,
+        generation_key: buildActionGenerationKey({ type: "competitor_refresh", facility_id: unitType.facility_id, unit_type_id: unitType.id }),
         evidence: staleMarket.evidence,
         proposed_change: { kind: "refresh_competitor_observations" },
         linked_signal_titles: [staleMarket.title]
@@ -123,6 +145,7 @@ export function generateActionsFromSignals(input: GenerateActionsInput): Generat
       recommendation: "review",
       facility_id: null,
       unit_type_id: null,
+      generation_key: buildActionGenerationKey({ type: "discount_recovery" }),
       evidence: discountSignal.evidence,
       proposed_change: { kind: "discount_recovery" },
       linked_signal_titles: [discountSignal.title]
@@ -134,7 +157,7 @@ export function generateActionsFromSignals(input: GenerateActionsInput): Generat
       title: `Follow up ${booking.customer_name}`,
       decision_question: `Follow up ${booking.customer_name} now to protect €${booking.quoted_monthly_rate}/mo?`,
       description: `${booking.customer_name} requested ${booking.unit_type_name}.`,
-      exact_next_step: booking.next_action,
+      exact_next_step: getBookingNextAction(booking, input),
       category: "booking_follow_up",
       priority: booking.customer_type === "business" ? "high" : "medium",
       confidence_score: booking.customer_type === "business" ? 0.82 : 0.68,
@@ -144,6 +167,7 @@ export function generateActionsFromSignals(input: GenerateActionsInput): Generat
       facility_id: booking.facility_id,
       unit_type_id: booking.unit_type_id,
       booking_request_id: booking.id,
+      generation_key: buildActionGenerationKey({ type: "booking_followup", facility_id: booking.facility_id, unit_type_id: booking.unit_type_id, booking_request_id: booking.id }),
       evidence: { customer_type: booking.customer_type, move_in_date: booking.preferred_move_in_date, source: booking.source },
       proposed_change: { kind: "booking_follow_up", booking_id: booking.id },
       linked_signal_titles: input.signals.filter((signal) => signal.unit_type_id === booking.unit_type_id).map((signal) => signal.title)
@@ -165,6 +189,7 @@ export function generateActionsFromSignals(input: GenerateActionsInput): Generat
       recommendation: "review",
       facility_id: seasonalSignal.facility_id,
       unit_type_id: seasonalSignal.unit_type_id,
+      generation_key: buildActionGenerationKey({ type: "campaign_launch", facility_id: seasonalSignal.facility_id, unit_type_id: seasonalSignal.unit_type_id, template: "student_summer_storage" }),
       evidence: seasonalSignal.evidence,
       proposed_change: { kind: "launch_campaign", template: "student_summer_storage" },
       linked_signal_titles: [seasonalSignal.title]

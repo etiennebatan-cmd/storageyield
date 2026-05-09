@@ -32,22 +32,33 @@ export async function POST(request: Request) {
     });
 
     const organizationId = parsed.data.organization_id ?? access.organizationIds[0];
-    if (!generatedActions.length) return NextResponse.json({ ok: true, actions: [] });
 
-    const existingTitles = new Set(
-      (
-        await access.supabase
-          .from("actions")
-          .select("title")
-          .in("organization_id", access.organizationIds)
-          .in("title", generatedActions.map((action) => action.title))
-          .in("status", ["proposed", "approved", "active"])
-      ).data?.map((action) => action.title as string) ?? []
-    );
+    const generationKeys = Array.from(new Set(generatedActions.map((action) => action.generation_key)));
+    const proposedQuery = access.supabase
+      .from("actions")
+      .select("id,generation_key")
+      .in("organization_id", access.organizationIds)
+      .eq("status", "proposed")
+      .eq("generated_by_engine", true);
+    const { data: existingProposed, error: existingError } = parsed.data.facility_id
+      ? await proposedQuery.or(`facility_id.eq.${parsed.data.facility_id},facility_id.is.null`)
+      : await proposedQuery;
+    if (existingError) return NextResponse.json({ error: existingError.message }, { status: 500 });
 
-    const rows = generatedActions
-      .filter((action) => !existingTitles.has(action.title))
-      .map((action) => ({
+    const existingByKey = new Map((existingProposed ?? []).filter((row) => row.generation_key).map((row) => [row.generation_key as string, row.id as string]));
+    const staleIds = (existingProposed ?? [])
+      .filter((row) => row.generation_key && !generationKeys.includes(row.generation_key as string))
+      .map((row) => row.id as string);
+
+    if (staleIds.length) {
+      const { error: staleError } = await access.supabase
+        .from("actions")
+        .update({ status: "dismissed", dismissed_at: new Date().toISOString(), superseded_at: new Date().toISOString() })
+        .in("id", staleIds);
+      if (staleError) return NextResponse.json({ error: staleError.message }, { status: 500 });
+    }
+
+    const toRow = (action: (typeof generatedActions)[number]) => ({
         organization_id: organizationId,
         facility_id: action.facility_id,
         unit_type_id: action.unit_type_id,
@@ -65,13 +76,37 @@ export async function POST(request: Request) {
         risk_level: action.risk_level,
         recommendation: action.recommendation,
         evidence: { ...action.evidence, linked_signal_titles: action.linked_signal_titles },
-        proposed_change: action.proposed_change
-      }));
+        proposed_change: action.proposed_change,
+        generated_by_engine: true,
+        generation_key: action.generation_key,
+        superseded_at: null
+    });
 
-    if (!rows.length) return NextResponse.json({ ok: true, actions: [] });
-    const { data: inserted, error } = await access.supabase.from("actions").insert(rows).select("*");
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return NextResponse.json({ ok: true, actions: inserted ?? [] });
+    const touched = [];
+    for (const action of generatedActions) {
+      const existingId = existingByKey.get(action.generation_key);
+      if (existingId) {
+        const row = toRow(action);
+        const { data: updated, error } = await access.supabase
+          .from("actions")
+          .update(row)
+          .eq("id", existingId)
+          .select("*")
+          .single();
+        if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+        if (updated) touched.push(updated);
+      } else {
+        const { data: inserted, error } = await access.supabase
+          .from("actions")
+          .insert(toRow(action))
+          .select("*")
+          .single();
+        if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+        if (inserted) touched.push(inserted);
+      }
+    }
+
+    return NextResponse.json({ ok: true, actions: touched, superseded: staleIds.length });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Decision generation failed" }, { status: 500 });
   }

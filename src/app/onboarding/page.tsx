@@ -1,14 +1,32 @@
+import type { Metadata } from "next";
 import { OnboardingSetupForm } from "@/components/app/onboarding-setup-form";
-import { createClient } from "@/lib/supabase/server";
+import { createServerComponentClient, hasSupabaseServerEnv } from "@/lib/supabase/server";
 import { isDemoMode } from "@/lib/demo-mode";
 import { redirect } from "next/navigation";
 
-export default async function OnboardingPage() {
-  const demoMode = isDemoMode();
+export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Onboarding | StorageYield",
+  robots: {
+    index: false,
+    follow: false
+  }
+};
+
+export default async function OnboardingPage({ searchParams }: { searchParams?: { demo?: string } }) {
+  const demoMode = isDemoMode() || searchParams?.demo === "1";
   if (!demoMode) {
-    const supabase = createClient();
+    if (!hasSupabaseServerEnv()) redirect("/login?error=Supabase%20is%20not%20configured%20for%20production%20mode.");
+    const supabase = createServerComponentClient();
     const { data } = await supabase.auth.getUser();
-    if (!data.user) redirect("/login");
+    if (!data.user) redirect("/login?next=/onboarding");
+    const { data: memberships } = await supabase
+      .from("organization_members")
+      .select("organization_id")
+      .eq("user_id", data.user.id)
+      .limit(1);
+    if ((memberships ?? []).length) redirect("/app/data-integrations");
   }
 
   return (

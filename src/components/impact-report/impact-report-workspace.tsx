@@ -29,16 +29,18 @@ export function ImpactReportWorkspace() {
         </div>
         <section className="grid gap-5 xl:grid-cols-[1fr_0.8fr]">
           <div className="card p-5">
-            <h2 className="text-2xl font-semibold text-slate-950">Measured impact</h2>
-            <p className="mt-2 text-slate-600">Approved pricing, converted bookings and launched campaigns are carried into this report through the shared store.</p>
+            <h2 className="text-2xl font-semibold text-slate-950">Decisions approved this week</h2>
+            <p className="mt-2 text-slate-600">Every row is backed by action events, price changes or converted bookings.</p>
             <div className="mt-5 space-y-3">
-              {workspace.snapshot.actions.filter((action) => ["approved", "completed", "active"].includes(action.status)).map((action) => (
+              {workspace.snapshot.impact.actionTimeline.map((action) => (
                 <div className="rounded-2xl border border-slate-200 p-4" key={action.id}>
                   <div className="flex items-center justify-between gap-3"><p className="font-semibold text-slate-950">{action.title}</p><Badge tone="green">{action.status}</Badge></div>
-                  <p className="mt-1 text-sm text-slate-600">{action.estimated_monthly_uplift ? `${formatEur(action.estimated_monthly_uplift)}/mo expected` : "Tracked outcome"}</p>
+                  <p className="mt-1 text-sm text-slate-600">{action.expectedMonthlyUplift ? `${formatEur(action.expectedMonthlyUplift)}/mo expected` : "Tracked outcome"}</p>
+                  {action.beforeValue || action.afterValue ? <p className="mt-1 text-sm text-slate-600">Before {action.beforeValue ?? "n/a"} · after {action.afterValue ?? "n/a"}</p> : null}
+                  {action.evidenceSummary.length ? <p className="mt-2 text-xs text-slate-500">{action.evidenceSummary.join(" · ")}</p> : null}
                 </div>
               ))}
-              {!workspace.snapshot.actions.some((action) => ["approved", "completed", "active"].includes(action.status)) ? <p className="text-sm text-slate-600">Approve a decision to start tracking impact.</p> : null}
+              {!workspace.snapshot.impact.actionTimeline.length ? <p className="text-sm text-slate-600">Approve a decision to start tracking impact.</p> : null}
             </div>
           </div>
           <div className="card p-5">
@@ -50,6 +52,35 @@ export function ImpactReportWorkspace() {
                   <p className="mt-1 text-sm text-slate-600">{action.exact_next_step}</p>
                 </div>
               ))}
+            </div>
+          </div>
+        </section>
+        <section className="grid gap-5 md:grid-cols-3">
+          <div className="card p-5">
+            <h2 className="font-semibold text-slate-950">Price changes</h2>
+            <div className="mt-3 space-y-2">
+              {workspace.snapshot.impact.priceChangesApproved.map((change) => (
+                <p className="text-sm text-slate-600" key={`${change.actionId}-${change.approvedAt}`}>{change.unitTypeName ?? change.actionTitle}: {change.oldPrice == null ? "n/a" : formatEur(change.oldPrice)} to {change.newPrice == null ? "n/a" : formatEur(change.newPrice)}</p>
+              ))}
+              {!workspace.snapshot.impact.priceChangesApproved.length ? <p className="text-sm text-slate-600">No approved price changes yet.</p> : null}
+            </div>
+          </div>
+          <div className="card p-5">
+            <h2 className="font-semibold text-slate-950">Booking conversions</h2>
+            <div className="mt-3 space-y-2">
+              {workspace.snapshot.impact.convertedBookingRows.map((booking) => (
+                <p className="text-sm text-slate-600" key={booking.bookingId}>{booking.customerName}: {booking.unitTypeName}, {formatEur(booking.rent)}/mo</p>
+              ))}
+              {!workspace.snapshot.impact.convertedBookingRows.length ? <p className="text-sm text-slate-600">No converted booking impact yet.</p> : null}
+            </div>
+          </div>
+          <div className="card p-5">
+            <h2 className="font-semibold text-slate-950">Campaigns launched</h2>
+            <div className="mt-3 space-y-2">
+              {workspace.snapshot.impact.campaignsLaunched.map((campaign) => (
+                <p className="text-sm text-slate-600" key={campaign.id}>{campaign.name}: {campaign.bookings} bookings, {formatEur(campaign.estimated_rent_created)} rent created</p>
+              ))}
+              {!workspace.snapshot.impact.campaignsLaunched.length ? <p className="text-sm text-slate-600">No launched campaign impact yet.</p> : null}
             </div>
           </div>
         </section>

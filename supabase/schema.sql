@@ -483,6 +483,9 @@ alter table actions add column if not exists approved_change jsonb;
 alter table actions add column if not exists outcome jsonb;
 alter table actions add column if not exists approved_at timestamptz;
 alter table actions add column if not exists dismissed_at timestamptz;
+alter table actions add column if not exists generated_by_engine boolean not null default true;
+alter table actions add column if not exists generation_key text;
+alter table actions add column if not exists superseded_at timestamptz;
 alter table signals add column if not exists description text;
 alter table signals add column if not exists status text not null default 'new';
 
@@ -518,6 +521,7 @@ create index if not exists actions_facility_idx on actions(facility_id, created_
 create index if not exists signals_organization_created_idx on signals(organization_id, created_at desc);
 create index if not exists signals_facility_category_idx on signals(facility_id, category, created_at desc);
 create index if not exists action_events_action_id_idx on action_events(action_id, created_at desc);
+create index if not exists actions_generation_key_idx on actions(organization_id, generation_key) where generation_key is not null;
 create index if not exists campaigns_organization_status_idx on campaigns(organization_id, status, start_date);
 create index if not exists campaigns_facility_idx on campaigns(facility_id, start_date);
 create index if not exists pricing_rules_organization_idx on pricing_rules(organization_id, is_active);
@@ -959,12 +963,12 @@ with check (is_org_member(id));
 
 create policy "members can read org membership" on organization_members
 for select
-using (is_org_member(organization_id));
+using (user_id = auth.uid());
 
 create policy "owner can manage org membership" on organization_members
 for all
-using (is_org_owner(organization_id))
-with check (is_org_owner(organization_id));
+using (user_id = auth.uid() and role = 'owner')
+with check (user_id = auth.uid());
 
 create policy "org members can read facilities" on facilities
 for select

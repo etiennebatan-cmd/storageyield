@@ -2,7 +2,8 @@ import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { chromium } from "playwright-core";
 
-const baseUrl = process.env.STORAGEYIELD_ACCEPTANCE_URL ?? "http://127.0.0.1:3000";
+const ownsServer = !process.env.STORAGEYIELD_ACCEPTANCE_URL;
+const baseUrl = process.env.STORAGEYIELD_ACCEPTANCE_URL ?? "http://127.0.0.1:3210";
 
 function chromeExecutablePath() {
   const candidates = [
@@ -32,11 +33,16 @@ async function waitForServer(url, timeoutMs = 45000) {
 }
 
 async function ensureServer() {
+  if (!ownsServer) {
+    await waitForServer(`${baseUrl}/demo`);
+    return null;
+  }
   try {
     await waitForServer(`${baseUrl}/demo`, 3000);
     return null;
   } catch {
-    const child = spawn("npm", ["run", "dev", "--", "--hostname", "127.0.0.1"], {
+    const port = new URL(baseUrl).port || "3210";
+    const child = spawn("npm", ["run", "dev", "--", "--hostname", "127.0.0.1", "--port", port], {
       cwd: process.cwd(),
       env: { ...process.env, NEXT_TELEMETRY_DISABLED: "1" },
       stdio: ["ignore", "pipe", "pipe"]
@@ -71,7 +77,7 @@ async function main() {
     await page.getByText("Thanks. The facility will contact you shortly").waitFor();
 
     await page.goto(`${baseUrl}/app/booking-conversion?demo=1`, { waitUntil: "networkidle" });
-    await page.getByText("Demo workspace enabled").waitFor();
+    await page.getByText("Demo workspace enabled").first().waitFor();
     const bookingCard = page.locator("article").filter({ hasText: "Acceptance Test Booker" }).first();
     await bookingCard.waitFor();
     await bookingCard.getByRole("button", { name: "Assign unit" }).click();

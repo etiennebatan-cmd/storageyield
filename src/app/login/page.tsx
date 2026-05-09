@@ -1,4 +1,13 @@
+import type { Metadata } from "next";
 import { LoginForm } from "@/components/app/auth-forms";
+
+export const metadata: Metadata = {
+  title: "Login | StorageYield",
+  robots: {
+    index: false,
+    follow: false
+  }
+};
 
 export default function LoginPage() {
   return (

@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react";
 import { Check, Copy, X, type LucideIcon } from "lucide-react";
 import type { OperatorAction, OperatorBooking } from "@/lib/operator-demo";
+import { evidenceToBullets } from "@/lib/actions/evidence-format";
 
 export type Tone = "slate" | "green" | "amber" | "red" | "blue" | "dark";
 
@@ -125,7 +126,7 @@ export function leadScore(booking: OperatorBooking) {
 }
 
 export function actionQuestion(action: OperatorAction) {
-  const firstEvidence = action.evidence[0]?.toLowerCase() ?? "";
+  const firstEvidence = evidenceToBullets(action.evidence)[0]?.toLowerCase() ?? "";
   if (action.title.toLowerCase().startsWith("hold")) return `${action.title}?`;
   if (action.category === "pricing" && action.recommended_street_rate) return `${action.title} to ${formatEur(action.recommended_street_rate)}?`;
   if (action.category === "campaign") return `${action.title}?`;

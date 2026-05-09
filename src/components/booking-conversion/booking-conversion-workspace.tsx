@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import type { OperatorBooking } from "@/lib/operator-demo";
 import { useStorageYieldWorkspace } from "@/components/app-shell/use-storageyield-workspace";
 import { WorkspaceGate } from "@/components/app-shell/workspace-gate";
-import { Badge, Button, SlideOver, Toasts, ageLabel, formatEur, leadScore } from "@/components/app-shell/shared-ui";
+import { Badge, Button, SlideOver, Toasts, ageLabel, formatEur } from "@/components/app-shell/shared-ui";
+import { calculateLeadScore, getBookingNextAction, getBookingUrgency } from "@/lib/bookings/lead-scoring";
 
 export function BookingConversionWorkspace() {
   const workspace = useStorageYieldWorkspace();
@@ -38,16 +39,21 @@ export function BookingConversionWorkspace() {
                   <Badge>{rows.length}</Badge>
                 </div>
                 <div className="space-y-3">
-                  {rows.map((booking) => (
+                  {rows.map((booking) => {
+                    const lead = calculateLeadScore(booking, workspace.snapshot);
+                    const urgency = getBookingUrgency(booking, workspace.snapshot);
+                    return (
                     <article className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md" key={booking.id}>
                       <div className="flex items-start justify-between gap-3">
                         <h3 className="text-lg font-semibold text-slate-950">{booking.customer_name}</h3>
-                        <Badge tone={leadScore(booking) >= 70 ? "green" : leadScore(booking) >= 45 ? "amber" : "slate"}>{leadScore(booking)}</Badge>
+                        <Badge tone={urgency === "high" ? "green" : urgency === "medium" ? "amber" : "slate"}>{lead.score}</Badge>
                       </div>
                       <p className="mt-2 text-sm text-slate-600">{booking.unit_type_name} · {booking.facility_name}</p>
+                      <div className="mt-2 flex flex-wrap gap-2"><Badge>{booking.customer_type}</Badge><Badge tone={urgency === "high" ? "red" : urgency === "medium" ? "amber" : "slate"}>{urgency} urgency</Badge></div>
                       <p className="mt-2 text-sm font-semibold text-slate-950">{formatEur(booking.quoted_monthly_rate)}/mo expected</p>
                       <p className="mt-2 text-sm text-slate-600">Move-in {booking.preferred_move_in_date} · age {ageLabel(booking.created_at)}</p>
-                      <p className="mt-3 text-sm text-slate-700">{booking.next_action}</p>
+                      <p className="mt-3 text-sm text-slate-700">{getBookingNextAction(booking, workspace.snapshot)}</p>
+                      <p className="mt-2 text-xs text-slate-500">{lead.reasons.slice(0, 3).join(" · ")}</p>
                       <div className="mt-4 flex flex-wrap gap-2">
                         {booking.status === "requested" ? <Button onClick={() => workspace.moveBooking(booking, "contacted")} variant="secondary">Contacted</Button> : null}
                         {["requested", "contacted"].includes(booking.status) ? <Button onClick={() => setSelected(booking)} variant="secondary">Assign unit</Button> : null}
@@ -56,7 +62,8 @@ export function BookingConversionWorkspace() {
                         <Button onClick={() => { navigator.clipboard.writeText(`Hi ${booking.customer_name}, we can reserve your ${booking.unit_type_name} at ${booking.facility_name}. Are you available today to confirm?`); workspace.toast("Follow-up copied"); }} variant="ghost">Copy follow-up</Button>
                       </div>
                     </article>
-                  ))}
+                    );
+                  })}
                   {!rows.length ? <p className="rounded-2xl border border-dashed border-slate-200 p-4 text-sm text-slate-500">No bookings here.</p> : null}
                 </div>
               </section>

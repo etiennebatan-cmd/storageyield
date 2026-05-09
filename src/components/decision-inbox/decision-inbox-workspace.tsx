@@ -6,6 +6,7 @@ import type { OperatorAction } from "@/lib/operator-demo";
 import { useStorageYieldWorkspace } from "@/components/app-shell/use-storageyield-workspace";
 import { WorkspaceGate } from "@/components/app-shell/workspace-gate";
 import { Badge, Button, ImpactStat, SlideOver, Toasts, actionQuestion, actionTone, formatEur } from "@/components/app-shell/shared-ui";
+import { evidenceToBullets, evidenceToSections } from "@/lib/actions/evidence-format";
 
 export function DecisionInboxWorkspace() {
   const workspace = useStorageYieldWorkspace();
@@ -74,6 +75,10 @@ export function DecisionInboxWorkspace() {
 
       {selected ? (
         <SlideOver title="Decision evidence" onClose={() => setSelected(null)}>
+          {(() => {
+            const bullets = evidenceToBullets(selected.evidence);
+            const sections = evidenceToSections(selected.evidence);
+            return (
           <div className="space-y-4">
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Question</p>
@@ -85,16 +90,26 @@ export function DecisionInboxWorkspace() {
               <div className="rounded-2xl border border-slate-200 p-4"><p className="text-sm text-slate-500">Confidence</p><p className="mt-1 text-2xl font-semibold">{Math.round(selected.confidence * 100)}%</p></div>
               <div className="rounded-2xl border border-slate-200 p-4"><p className="text-sm text-slate-500">Status</p><p className="mt-1 text-2xl font-semibold capitalize">{selected.status}</p></div>
             </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              {sections.map((section) => (
+                <div className="rounded-2xl border border-slate-200 p-4 text-sm" key={section.label}>
+                  <p className="font-semibold text-slate-500">{section.label}</p>
+                  <p className="mt-1 text-slate-800">{section.value}</p>
+                </div>
+              ))}
+            </div>
             <div className="space-y-3">
-              {selected.evidence.length ? selected.evidence.map((item) => (
+              {bullets.length ? bullets.map((item) => (
                 <div className="rounded-2xl border border-slate-200 p-4 text-sm text-slate-700" key={item}>{item}</div>
-              )) : <div className="rounded-2xl border border-slate-200 p-4 text-sm text-slate-600">No evidence rows were stored for this decision.</div>}
+              )) : <div className="rounded-2xl border border-slate-200 p-4 text-sm text-slate-600">No evidence available yet.</div>}
             </div>
             <div className="flex flex-wrap gap-3">
               <Button onClick={() => { workspace.approveAction(selected); setSelected(null); }}>Approve</Button>
               <Button onClick={() => { workspace.dismissAction(selected); setSelected(null); }} variant="secondary">Dismiss</Button>
             </div>
           </div>
+            );
+          })()}
         </SlideOver>
       ) : null}
     </div>

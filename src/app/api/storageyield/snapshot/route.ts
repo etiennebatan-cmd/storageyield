@@ -4,6 +4,9 @@ import { calculateDataHealth } from "@/lib/data-health";
 import { type Campaign, type OperatorAction, type OperatorBooking, type OperatorSignal } from "@/lib/operator-demo";
 import { calculateMarketAverages } from "@/lib/signals/generate-signals";
 import { buildUnitPressureRows } from "@/lib/pricing/unit-pressure";
+import { evidenceToBullets, normalizeEvidence } from "@/lib/actions/evidence-format";
+import { calculateImpactReport } from "@/lib/impact/impact-report";
+import { calculateMoneyMap } from "@/lib/impact/money-map";
 import type { Competitor, CompetitorPriceObservation, CompetitorUnitMapping, CompetitorUnitType, Facility, FacilityCompetitor, Unit, UnitType } from "@/lib/types";
 
 function mapBookingStatus(status: string): OperatorBooking["status"] {
@@ -17,14 +20,6 @@ function mapBookingStatus(status: string): OperatorBooking["status"] {
 function mapActionStatus(status: string): OperatorAction["status"] {
   if (status === "approved" || status === "active" || status === "completed" || status === "rejected" || status === "dismissed") return status;
   return "proposed";
-}
-
-function actionEvidenceToList(evidence: unknown): string[] {
-  if (Array.isArray(evidence)) return evidence.map(String);
-  if (evidence && typeof evidence === "object") {
-    return Object.entries(evidence as Record<string, unknown>).map(([key, value]) => `${key}: ${typeof value === "object" ? JSON.stringify(value) : String(value)}`);
-  }
-  return [];
 }
 
 export async function GET() {
@@ -41,6 +36,7 @@ export async function GET() {
   const organizationIds = (memberships ?? []).map((membership) => membership.organization_id as string);
   if (!organizationIds.length) {
     return NextResponse.json({
+      onboarding_required: true,
       facilities: [],
       unitTypes: [],
       units: [],
@@ -59,7 +55,32 @@ export async function GET() {
       dataHealth: { score: 0, issues: [{ id: "no-organization", title: "No organization has been set up yet", severity: "high", cta: "Create organization" }] },
       activity: [],
       unitRows: [],
-      impact: { rentRoll: 0, expectedMonthlyUplift: 0, simulatedUplift: 0, approvedDecisions: 0, completedDecisions: 0, convertedBookings: 0, actionEvents: [] }
+      moneyMap: {
+        pricingGap: 0,
+        vacancyDrag: 0,
+        discountLeakage: 0,
+        arrearsRisk: 0,
+        leadFollowUpLoss: 0,
+        totalMoneyLeftOnTable: 0,
+        items: []
+      },
+      impact: {
+        rentRoll: 0,
+        expectedMonthlyUplift: 0,
+        simulatedUplift: 0,
+        approvedDecisions: 0,
+        completedDecisions: 0,
+        convertedBookings: 0,
+        actionEvents: [],
+        completedExpectedUplift: 0,
+        newMonthlyRentFromConvertedBookings: 0,
+        priceChangesApproved: [],
+        convertedBookingRows: [],
+        campaignsLaunched: [],
+        discountRecoveryActions: [],
+        competitorRefreshActions: [],
+        actionTimeline: []
+      }
     });
   }
 
@@ -144,6 +165,7 @@ export async function GET() {
       source: "booking widget",
       status: mapBookingStatus(booking.status),
       created_at: booking.created_at,
+      customer_phone: booking.customer_phone ?? null,
       next_action: booking.status === "requested" ? "Contact customer and confirm availability" : "Track conversion outcome"
     } satisfies OperatorBooking;
   });
@@ -161,7 +183,7 @@ export async function GET() {
       unit_type_id: signal.unit_type_id ?? undefined,
       unit_type_name: unitType?.name,
       severity: signal.severity,
-      evidence: evidence.summary ? String(evidence.summary) : actionEvidenceToList(evidence).join(", "),
+      evidence: evidenceToBullets(evidence).join(", "),
       created_at: signal.created_at,
       linked_action_id: signal.linked_action_id ?? undefined
     } satisfies OperatorSignal;
@@ -180,7 +202,7 @@ export async function GET() {
       priority: action.priority,
       category: action.category,
       source_signals: Array.isArray(evidence.source_signals) ? evidence.source_signals : [],
-      evidence: actionEvidenceToList(evidence),
+      evidence: normalizeEvidence(evidence),
       linked_signal_ids: action.linked_signal_ids ?? [],
       status: mapActionStatus(action.status),
       created_at: action.created_at,
@@ -240,11 +262,13 @@ export async function GET() {
     competitorPriceObservations
   });
 
-  const approvedActions = actions.filter((action) => action.status === "approved");
-  const completedActions = actions.filter((action) => action.status === "completed");
-  const expectedMonthlyUplift = [...approvedActions, ...completedActions].reduce((sum, action) => sum + (action.estimated_monthly_uplift ?? 0), 0);
-  const rentRoll = units.filter((unit) => unit.status === "occupied").reduce((sum, unit) => sum + (unit.current_rent_monthly ?? 0), 0);
-  const actionEvents = actionEventsResult.data ?? [];
+  const actionEvents = (actionEventsResult.data ?? []).map((event) => ({
+    ...event,
+    action_id: event.action_id ?? null,
+    payload: event.payload && typeof event.payload === "object" ? event.payload as Record<string, unknown> : {}
+  }));
+  const moneyMap = calculateMoneyMap({ unitTypes, units, bookings });
+  const impact = calculateImpactReport({ actions, actionEvents, bookings, units, unitTypes, campaigns });
 
   return NextResponse.json({
     facilities,
@@ -265,14 +289,7 @@ export async function GET() {
     dataHealth: calculateDataHealth({ unitTypes, units, bookings, competitors, competitorPriceObservations, competitorUnitMappings, campaigns }),
     activity: [],
     unitRows: buildUnitPressureRows({ facilities, unitTypes, units, bookings, marketAverages }),
-    impact: {
-      rentRoll,
-      expectedMonthlyUplift,
-      simulatedUplift: Math.round(expectedMonthlyUplift * 0.46),
-      approvedDecisions: approvedActions.length,
-      completedDecisions: completedActions.length,
-      convertedBookings: bookings.filter((booking) => booking.status === "converted").length,
-      actionEvents
-    }
+    moneyMap,
+    impact
   });
 }

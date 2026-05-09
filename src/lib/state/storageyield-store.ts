@@ -1,6 +1,4 @@
-import type { DemoState } from "@/lib/demo-state";
 import type { Campaign, OperatorAction, OperatorBooking, OperatorSignal } from "@/lib/operator-demo";
-import type { UnitPressureRow } from "@/lib/pricing/unit-pressure";
 import type {
   Competitor,
   CompetitorPriceObservation,
@@ -11,43 +9,12 @@ import type {
   UnitType
 } from "@/lib/types";
 import type { WidgetBookingInput } from "@/lib/validators/widget";
+import type { ImpactReport, StorageYieldSnapshot, DataHealthIssue, DataHealthReport } from "@/types/domain";
 
 type StoreResult<T> = Promise<T>;
 export type StoreMode = "demo" | "production";
 
-export type DataHealthIssue = {
-  id: string;
-  title: string;
-  severity: "low" | "medium" | "high";
-  cta: string;
-};
-
-export type DataHealthReport = {
-  score: number;
-  issues: DataHealthIssue[];
-};
-
-export type StorageYieldSnapshot = {
-  facilities: Facility[];
-  unitTypes: UnitType[];
-  units: Unit[];
-  bookings: OperatorBooking[];
-  leads: unknown[];
-  signals: OperatorSignal[];
-  actions: OperatorAction[];
-  competitors: Competitor[];
-  competitorUnitTypes: CompetitorUnitType[];
-  competitorPriceObservations: CompetitorPriceObservation[];
-  competitorUnitMappings: CompetitorUnitMapping[];
-  observations: CompetitorPriceObservation[];
-  campaigns: Campaign[];
-  actionEvents: DemoState["actionEvents"];
-  weeklyReports: unknown[];
-  dataHealth: DataHealthReport;
-  activity: DemoState["activity"];
-  unitRows: UnitPressureRow[];
-  impact: Awaited<ReturnType<StorageYieldStore["getImpactReport"]>>;
-};
+export type { StorageYieldSnapshot, ImpactReport, DataHealthIssue, DataHealthReport };
 
 export type StorageYieldStore = {
   getFacilities(): StoreResult<Facility[]>;
@@ -73,15 +40,7 @@ export type StorageYieldStore = {
   launchCampaign(template: Campaign): StoreResult<Campaign>;
   generateSignals(input?: { organization_id?: string; facility_id?: string }): StoreResult<OperatorSignal[]>;
   generateActions(input?: { organization_id?: string; facility_id?: string }): StoreResult<OperatorAction[]>;
-  getImpactReport(): StoreResult<{
-    rentRoll: number;
-    expectedMonthlyUplift: number;
-    simulatedUplift: number;
-    approvedDecisions: number;
-    completedDecisions: number;
-    convertedBookings: number;
-    actionEvents: DemoState["actionEvents"];
-  }>;
+  getImpactReport(): StoreResult<ImpactReport>;
 };
 
 export { createDemoStore } from "@/lib/state/demo-store";

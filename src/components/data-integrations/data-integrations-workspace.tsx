@@ -8,7 +8,7 @@ import { Badge, CopyButton, Toasts } from "@/components/app-shell/shared-ui";
 
 export function DataIntegrationsWorkspace() {
   const workspace = useStorageYieldWorkspace();
-  const widgetUrl = "http://localhost:3000/widget/brussels-north-storage";
+  const widgetUrl = `http://localhost:3000/widget/${workspace.snapshot.facilities[0]?.public_slug ?? ""}`;
   const iframe = `<iframe src="${widgetUrl}" width="100%" height="720" style="border:0;border-radius:12px;"></iframe>`;
   const setup = [
     ["Add facility", workspace.snapshot.facilities.length > 0],
@@ -70,7 +70,7 @@ export function DataIntegrationsWorkspace() {
               <Link className="inline-flex items-center rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white" href="/widget/brussels-north-storage">Test booking</Link>
             </div>
           </div>
-          <div className="card overflow-hidden p-3"><iframe className="h-[560px] w-full rounded-2xl border border-slate-200" src="/widget/brussels-north-storage" /></div>
+          <div className="card overflow-hidden p-3"><iframe className="h-[560px] w-full rounded-2xl border border-slate-200" src={`/widget/${workspace.snapshot.facilities[0]?.public_slug ?? ""}`} /></div>
         </section>
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {[
