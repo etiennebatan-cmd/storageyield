@@ -1,192 +1,218 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Building2, CheckCircle2, LineChart, Radar, Warehouse } from "lucide-react";
-import { BeneluxProofSection } from "@/components/marketing/benelux-proof-section";
-import { CtaSection } from "@/components/marketing/cta-section";
+import { ArrowRight, Building2, CheckCircle2, CreditCard, FileSignature, KeyRound, LineChart, MousePointerClick, Radar, Warehouse } from "lucide-react";
+import { FeatureStatusBadge } from "@/components/marketing/feature-status-badge";
 import { FaqSection } from "@/components/marketing/faq-section";
-import { FeatureGrid } from "@/components/marketing/feature-grid";
+import { JsonLd, OrganizationJsonLd, SoftwareJsonLd } from "@/components/marketing/json-ld";
+import { LifecycleFlow } from "@/components/marketing/lifecycle-flow";
 import { MarketingFooter } from "@/components/marketing/marketing-footer";
 import { MarketingNav } from "@/components/marketing/marketing-nav";
-import { WorkflowSection } from "@/components/marketing/workflow-section";
+import { MigrationSection } from "@/components/marketing/migration-section";
+import { ModuleShowcase } from "@/components/marketing/module-showcase";
+import { PageSpecificCta } from "@/components/marketing/page-specific-cta";
+import { ProductMockup } from "@/components/marketing/product-mockup";
+import { ProofBand } from "@/components/marketing/proof-band";
 import { pageUrl } from "@/lib/marketing/seo-pages";
 import { siteConfig } from "@/lib/marketing/site-config";
 
 export const metadata: Metadata = {
   title: "Self-storage software voor Benelux-operators | StorageYield",
-  description: "StorageYield helpt self-storage operators in België en Nederland met online reserveringen, onbemande workflows, lokale betaalflows en revenue intelligence.",
+  description: "StorageYield helpt opslagoperators met online reserveringen, onbemande workflows, lokale betaalvoorbereiding en revenue intelligence.",
   alternates: { canonical: pageUrl("/") },
   openGraph: {
     title: "Self-storage software voor Benelux-operators | StorageYield",
-    description: "Online reserveringen, onbemande workflows, lokale betaalflows en revenue intelligence voor Benelux opslagoperators.",
+    description: "Online reserveringen, onbemande workflows, lokale betaalvoorbereiding en revenue intelligence voor Benelux opslagoperators.",
     url: pageUrl("/"),
-    siteName: "StorageYield",
+    siteName: siteConfig.name,
     locale: "nl_BE",
     type: "website"
   }
 };
 
-const modules = [
-  { title: "Online reserveringen", copy: "Hosted booking pages, knoppen, iframes en QR-links voor operators die boekbaar willen worden zonder website rebuild.", status: "Live MVP" },
-  { title: "Resource management", copy: "Units, garageboxen, containers en business storage resources in een commerciële voorraadlaag.", status: "Pilot" },
-  { title: "Zero-touch move-in", copy: "Workflowontwerp voor online reservering, contract, betaling en toegang met handmatige fallback waar nodig.", status: "Roadmap" },
-  { title: "Facturatie & betalingen", copy: "Voorbereid op Benelux betaalflows zoals iDEAL, Bancontact, SEPA en e-facturatie-roadmap.", status: "Voorbereid" },
-  { title: "Toegangsworkflows", copy: "Hardware-agnostische toegangslogica voor PIN, QR, mobile unlock en audit trails in toekomstige integraties.", status: "Roadmap" },
-  { title: "Revenue intelligence", copy: "Decision Inbox, Market Radar, Pricing Lab en Impact Report om omzetbeslissingen te onderbouwen.", status: "Live MVP" }
-];
-
-const storageModels = [
-  ["Self-storage", "Online reserveringen en prijsbeslissingen per unit type.", Warehouse],
-  ["Garageboxen", "Resource-first verhuur voor boxen, parking en gemengd gebruik.", Building2],
-  ["Containeropslag", "Seizoensvraag, zakelijke klanten en beschikbaarheid per container.", Warehouse],
-  ["Archiefopslag", "B2B-opvolging, contractduur en facturatie-readiness.", CheckCircle2],
-  ["Business storage", "Lead scoring voor hogere maandwaarde en opvolging.", LineChart],
-  ["Hybride locaties", "Meerdere resource types in één booking en intelligence laag.", Radar]
+const platformModules = [
+  { title: "Website & online reserveringen", copy: "Hosted booking pages, website button, iframe, QR-code en Google Business Profile-link.", status: "Beschikbaar" as const },
+  { title: "Resource management", copy: "Units, garageboxen, containers, parking, archive shelves en andere resource types.", status: "Pilot" as const },
+  { title: "Customer lifecycle", copy: "Van aanvraag naar lead score, follow-up, reservering en conversie.", status: "Beschikbaar" as const },
+  { title: "Facturatie & betalingen", copy: "Voorbereid op iDEAL, Bancontact, SEPA, kaartbetaling, btw en structured references.", status: "Roadmap" as const },
+  { title: "Toegangsworkflows", copy: "PIN, QR, mobile unlock, gate/smart lock integraties en non-payment suspension als roadmap.", status: "Roadmap" as const },
+  { title: "Contracten & ID-verificatie", copy: "itsme, ID-provider, e-signature en jurisdictielogica met handmatige fallback.", status: "Roadmap" as const },
+  { title: "Revenue intelligence", copy: "Decision Inbox, Pricing Lab, Market Radar, Impact Report en do-not-change aanbevelingen.", status: "Beschikbaar" as const },
+  { title: "API & integraties", copy: "CSV/import vandaag; PMS, accounting, access en API-ecosysteem op roadmap.", status: "Roadmap" as const }
 ];
 
 const faqs = [
-  { question: "Is StorageYield een volledig PMS?", answer: "StorageYield groeit richting een Benelux-native operating system, maar de pilot focust op booking, resources en revenue decisions. Betalingen, toegang en integraties worden eerlijk als roadmap gepositioneerd." },
-  { question: "Kan ik starten met een bestaande website?", answer: "Ja. De hosted booking page kan als knop, iframe, QR-code of Google Business Profile-link worden gebruikt zonder volledige website rebuild." },
-  { question: "Zijn iDEAL, Bancontact en PEPPOL live?", answer: "Nee. StorageYield is voorbereid op deze Benelux-workflows in de roadmap. Voor pilots wordt duidelijk afgesproken wat live is en wat handmatig gebeurt." },
-  { question: "Voor wie is StorageYield bedoeld?", answer: "Voor onafhankelijke self-storage, garagebox, containeropslag en hybride storage operators in België, Nederland en Luxemburg." }
+  { question: "Is StorageYield vandaag al een volledig PMS?", answer: "Nee. StorageYield is pilot-ready voor online booking, resource setup en revenue intelligence. Volledige PMS-vervanging, betalingen, toegang en portalmodules staan op de roadmap." },
+  { question: "Kan ik starten zonder website rebuild?", answer: "Ja. Een hosted booking page kan als link, knop, iframe, QR-code of Google Business Profile-link naast je bestaande website draaien." },
+  { question: "Zijn iDEAL, Bancontact, PEPPOL en itsme live?", answer: "Nee. Deze onderdelen worden eerlijk als roadmap of readiness gepositioneerd. In pilots kan een handmatige of concierge fallback worden gebruikt." },
+  { question: "Voor wie is dit gebouwd?", answer: "Voor onafhankelijke self-storage, garagebox, containeropslag, business storage en hybride opslagoperators in België, Nederland en Luxemburg." }
 ];
-
-function JsonLd({ data }: { data: Record<string, unknown> }) {
-  return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }} />;
-}
 
 export default function HomePage() {
   return (
     <>
       <MarketingNav />
       <main className="bg-[#f6f7f9]">
-        <section className="mx-auto grid max-w-[1180px] gap-10 px-5 py-16 lg:grid-cols-[1.05fr_0.95fr] lg:py-24">
-          <div>
-            <p className="text-sm font-bold uppercase tracking-[0.26em] text-emerald-600">Self-storage software Benelux</p>
-            <h1 className="mt-5 max-w-4xl text-5xl font-semibold tracking-tight text-slate-950 sm:text-6xl lg:text-7xl">
-              Self-storage software gebouwd voor de Benelux
+        <section className="border-b border-emerald-100 bg-emerald-50">
+          <div className="mx-auto flex max-w-[1240px] flex-wrap items-center justify-between gap-3 px-5 py-3 text-sm font-bold text-emerald-900">
+            <span>Gebouwd voor Benelux storage operators: online reserveringen, unmanned workflows en revenue intelligence.</span>
+            <Link href="/platform" className="inline-flex items-center gap-1 text-emerald-800">
+              Bekijk platform <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+        </section>
+
+        <section className="mx-auto grid max-w-[1240px] gap-10 px-5 py-16 lg:grid-cols-[0.88fr_1.12fr] lg:py-24">
+          <div className="flex flex-col justify-center">
+            <p className="text-sm font-black uppercase tracking-[0.28em] text-emerald-600">Benelux-native storage OS</p>
+            <h1 className="mt-5 text-5xl font-semibold tracking-tight text-slate-950 sm:text-6xl lg:text-7xl">
+              Het operating system voor moderne opslaglocaties in de Benelux
             </h1>
             <p className="mt-6 max-w-2xl text-xl leading-8 text-slate-600">
-              StorageYield helpt self-storage, garagebox en containeropslag operators met online reserveringen, onbemande workflows, lokale betaalflows en revenue intelligence.
+              StorageYield helpt self-storage, garagebox en containeropslag operators met boekingen, resources, klantflows, lokale betaalvoorbereiding en revenue intelligence.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:-translate-y-0.5 hover:bg-slate-800 active:translate-y-0" href={siteConfig.email}>
+              <Link href={siteConfig.email} className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-5 py-3 text-sm font-bold text-white shadow-sm hover:-translate-y-0.5 hover:bg-slate-800 active:translate-y-0">
                 Plan demo <ArrowRight className="h-4 w-4" />
               </Link>
-              <Link className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-950 shadow-sm hover:-translate-y-0.5 hover:bg-slate-50 active:translate-y-0" href="/demo">
-                Bekijk voorbeeld
+              <Link href="/platform" className="inline-flex items-center rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-950 shadow-sm hover:-translate-y-0.5 hover:bg-slate-50 active:translate-y-0">
+                Bekijk platform
               </Link>
             </div>
           </div>
-          <div className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-xl">
-            <div className="rounded-[1.5rem] bg-slate-950 p-6 text-white">
-              <p className="text-xs font-bold uppercase tracking-[0.24em] text-emerald-300">Benelux booking layer</p>
-              <h2 className="mt-4 text-3xl font-semibold tracking-tight">Van statische website naar boekbare opslaglocatie</h2>
-              <p className="mt-3 text-slate-300">Hosted booking page, Booking Conversion, Market Radar en Decision Inbox in één operatorflow.</p>
-              <div className="mt-6 grid gap-3">
-                {[
-                  ["Boekbaar", "Public URL, button, iframe en QR-link."],
-                  ["Opvolgbaar", "Aanvragen worden gescoord op urgentie en waarde."],
-                  ["Omzetgericht", "Prijs-, campagne- en competitor beslissingen met impact."]
-                ].map(([title, copy]) => (
-                  <div key={title} className="rounded-2xl border border-white/10 bg-white/10 p-4">
-                    <p className="font-semibold">{title}</p>
-                    <p className="mt-1 text-sm text-slate-300">{copy}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+          <ProductMockup variant="platform" />
         </section>
 
-        <section className="mx-auto grid max-w-[1180px] gap-4 px-5 py-12 md:grid-cols-3">
-          {[
-            ["Het probleem", "Veel Benelux-locaties draaien op statische websites, manuele move-ins, lokale betaalverwachtingen en meertalige klanten."],
-            ["De oplossing", "StorageYield vormt één commerciële laag voor boekingen, resources, customer lifecycle en revenue decisions."],
-            ["De pilot", "Start met hosted booking, manual competitor tracking en impactrapportage zonder te doen alsof alle integraties al live zijn."]
-          ].map(([title, copy]) => (
-            <article key={title} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h2 className="text-2xl font-semibold tracking-tight text-slate-950">{title}</h2>
-              <p className="mt-3 text-sm leading-6 text-slate-600">{copy}</p>
-            </article>
-          ))}
-        </section>
-
-        <FeatureGrid eyebrow="Core modules" title="Beheer, automatiseer en optimaliseer je opslaglocatie" copy="StorageYield combineert booking software met revenue intelligence voor onafhankelijke operators in België, Nederland en Luxemburg." features={modules} />
-        <BeneluxProofSection />
-        <WorkflowSection
-          title="Van statische website naar boekbare opslaglocatie"
-          steps={[
-            { title: "Hosted booking page", copy: "Gebruik een publieke boekingspagina naast je bestaande website." },
-            { title: "Resource keuze", copy: "Laat klanten kiezen per unit type, garagebox of container." },
-            { title: "Booking Conversion", copy: "Volg aanvragen op met lead score en next best action." },
-            { title: "Impact Report", copy: "Zie welke beslissingen, boekingen en prijswijzigingen waarde creëren." }
-          ]}
-        />
-
-        <section className="mx-auto max-w-[1180px] px-5 py-12">
-          <div className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
-            <p className="text-sm font-bold uppercase tracking-[0.24em] text-emerald-600">Revenue intelligence ingebouwd</p>
-            <h2 className="mt-3 text-4xl font-semibold tracking-tight text-slate-950">Niet alleen registreren, maar weten wat je moet veranderen</h2>
-            <div className="mt-8 grid gap-4 md:grid-cols-3">
-              {[
-                ["Demand matrix", "Vraag, bezetting en beschikbaarheid per unit type."],
-                ["Market Radar", "Concurrenten die je zelf kiest en handmatig verifieert."],
-                ["Decision Inbox", "Prijs-, campagne- en follow-up beslissingen met bewijs."],
-                ["Lead scoring", "Nieuwe aanvragen op waarde, urgentie en conversierisico."],
-                ["NOI impact", "Goedgekeurde acties en boekingen zichtbaar in Impact Report."],
-                ["Rent-review candidates", "Bestaande huurders alleen als review-kandidaat, niet automatisch verhoogd."]
-              ].map(([title, copy]) => (
-                <article key={title} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                  <h3 className="font-semibold text-slate-950">{title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">{copy}</p>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="mx-auto max-w-[1180px] px-5 py-12">
+        <section className="mx-auto max-w-[1240px] px-5 py-14">
           <div className="max-w-3xl">
-            <p className="text-sm font-bold uppercase tracking-[0.24em] text-emerald-600">Opslagmodellen</p>
-            <h2 className="mt-3 text-4xl font-semibold tracking-tight text-slate-950">Gebouwd voor verschillende opslagmodellen</h2>
+            <p className="text-sm font-black uppercase tracking-[0.24em] text-emerald-600">Waarom nu</p>
+            <h2 className="mt-3 text-4xl font-semibold tracking-tight text-slate-950">Veel Benelux operators draaien nog op statische websites, spreadsheets en losse tools</h2>
           </div>
           <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {storageModels.map(([title, copy, Icon]) => (
-              <article key={title as string} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-                <Icon className="h-6 w-6 text-emerald-600" />
+            {[
+              ["Geen online reserveringsflow", MousePointerClick],
+              ["Handmatige move-ins", KeyRound],
+              ["Lokale betaal- en facturatiedruk", CreditCard],
+              ["Geen systematische revenue intelligence", LineChart],
+              ["Geen duidelijke opvolging van leads", CheckCircle2],
+              ["Geen realtime zicht op resources", Warehouse]
+            ].map(([title, Icon]) => (
+              <article key={title as string} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                {typeof Icon !== "string" ? <Icon className="h-6 w-6 text-emerald-600" /> : null}
                 <h3 className="mt-4 text-xl font-semibold text-slate-950">{title as string}</h3>
-                <p className="mt-2 text-sm leading-6 text-slate-600">{copy as string}</p>
               </article>
             ))}
           </div>
         </section>
 
-        <section className="mx-auto max-w-[1180px] px-5 py-12">
+        <ModuleShowcase eyebrow="Platform modules" title="Alles wat je opslaglocatie nodig heeft — in één platform" copy="De volledige visie is breed, maar elke module is eerlijk gelabeld als beschikbaar, pilot of roadmap." modules={platformModules} columns={4} />
+
+        <LifecycleFlow
+          title="How StorageYield runs a facility"
+          copy="Van online verkoop naar customer lifecycle, resource activatie en continue omzetoptimalisatie."
+          steps={[
+            { title: "Sell online", copy: "Maak je locatie boekbaar via hosted booking page, website button, iframe, QR-code of Google Business Profile.", status: "Beschikbaar" },
+            { title: "Verify & onboard", copy: "Ontwerp identity, contract en payment stappen met handmatige fallback in pilot.", status: "Roadmap" },
+            { title: "Activate customer/resource", copy: "Koppel status, resource en access lifecycle aan de klantflow.", status: "Pilot" },
+            { title: "Optimise revenue", copy: "Gebruik Market Radar, Pricing Lab en Decision Inbox voor wekelijkse omzetbeslissingen.", status: "Beschikbaar" }
+          ]}
+        />
+
+        <section className="mx-auto max-w-[1240px] px-5 py-14">
           <div className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
-            <p className="text-sm font-bold uppercase tracking-[0.24em] text-emerald-600">Lees verder</p>
-            <div className="mt-6 grid gap-3 md:grid-cols-3">
+            <p className="text-sm font-black uppercase tracking-[0.24em] text-emerald-600">Benelux-native</p>
+            <h2 className="mt-3 text-4xl font-semibold tracking-tight text-slate-950">Niet vertaald voor Benelux. Ontworpen voor Benelux.</h2>
+            <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              {["Dutch/French/English customer flows", "iDEAL/Bancontact/SEPA roadmap", "PEPPOL/e-invoicing readiness", "Unmanned facility logic", "Hybrid resources, not only units", "Local competitor intelligence", "EU/GDPR/data-residency posture", "Brussels bilingual logic"].map((item) => (
+                <div key={item} className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm font-semibold text-slate-800">{item}</div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="mx-auto grid max-w-[1240px] gap-4 px-5 py-14 lg:grid-cols-3">
+          {[
+            ["Beschikbaar / Pilot", ["hosted booking page", "booking requests", "unit/resource setup", "manual competitor tracking", "Decision Inbox", "Pricing Lab", "Impact Report", "concierge setup"]],
+            ["Benelux roadmap", ["iDEAL", "Bancontact", "SEPA", "PEPPOL/e-facturatie", "Dutch/French contract logic", "itsme/ID verification", "access-control integrations"]],
+            ["Intelligence roadmap", ["Demand Matrix", "Price Move Simulator", "Unit/resource mix intelligence", "NOI/value creation", "AI operator copilot", "multi-site benchmarking"]]
+          ].map(([title, items], index) => (
+            <article key={title as string} className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm">
+              <FeatureStatusBadge status={index === 0 ? "Pilot" : "Roadmap"} />
+              <h2 className="mt-4 text-2xl font-semibold tracking-tight text-slate-950">{title as string}</h2>
+              <ul className="mt-5 space-y-2 text-sm font-medium text-slate-700">
+                {(items as string[]).map((item) => <li key={item}>• {item}</li>)}
+              </ul>
+            </article>
+          ))}
+        </section>
+
+        <section className="mx-auto grid max-w-[1240px] gap-6 px-5 py-14 lg:grid-cols-[0.9fr_1.1fr]">
+          <div>
+            <p className="text-sm font-black uppercase tracking-[0.24em] text-emerald-600">Revenue intelligence</p>
+            <h2 className="mt-3 text-4xl font-semibold tracking-tight text-slate-950">Een PMS registreert. StorageYield adviseert.</h2>
+            <p className="mt-4 text-lg leading-8 text-slate-600">
+              Decision memos, Demand Matrix, Price Move Simulator, Market Radar, NOI impact en do-not-change aanbevelingen maken de commerciële laag tastbaar.
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {["Decision memo", "Demand matrix", "Price move simulator", "Market Radar", "NOI impact", "Do-not-change recommendations"].map((item) => (
+              <div key={item} className="rounded-2xl border border-slate-200 bg-white p-5 font-semibold text-slate-950 shadow-sm">{item}</div>
+            ))}
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-[1240px] px-5 py-14">
+          <div className="max-w-3xl">
+            <p className="text-sm font-black uppercase tracking-[0.24em] text-emerald-600">Use cases</p>
+            <h2 className="mt-3 text-4xl font-semibold tracking-tight text-slate-950">Gebouwd voor klassieke en hybride opslagmodellen</h2>
+          </div>
+          <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {[
+              ["Self-storage", Warehouse],
+              ["Garageboxen", Building2],
+              ["Containeropslag", Warehouse],
+              ["Archiefopslag", FileSignature],
+              ["Business storage", LineChart],
+              ["Hybride urban storage hubs", Radar],
+              ["Caravan/boat storage", Warehouse],
+              ["Parking and micro-offices", Building2]
+            ].map(([label, Icon]) => (
+              <article key={label as string} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                {typeof Icon !== "string" ? <Icon className="h-6 w-6 text-emerald-600" /> : null}
+                <h3 className="mt-4 font-semibold text-slate-950">{label as string}</h3>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <ProofBand items={["Pilot-ready workflows zonder fake klantlogo’s.", "Manual setup available voor vroege operators.", "No full website rebuild required.", "Roadmap transparency per module.", "Designed for local payment and compliance realities.", "Built around unmanned operations."]} />
+        <MigrationSection />
+
+        <section className="mx-auto max-w-[1240px] px-5 py-14">
+          <div className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
+            <p className="text-sm font-black uppercase tracking-[0.24em] text-emerald-600">Lees verder</p>
+            <div className="mt-6 grid gap-3 md:grid-cols-4">
               {[
+                ["/platform", "Platform"],
                 ["/self-storage-software", "Self-storage software"],
                 ["/onbemande-self-storage-software", "Onbemande workflows"],
-                ["/opslagruimte-reserveringssysteem", "Online reserveringssysteem"],
-                ["/self-storage-facturatie", "Facturatie & betalingen"],
+                ["/opslagruimte-reserveringssysteem", "Reserveringssysteem"],
+                ["/self-storage-facturatie", "Facturatie"],
                 ["/self-storage-prijsoptimalisatie", "Prijsoptimalisatie"],
-                ["/garagebox-verhuur-software", "Garagebox verhuur software"]
+                ["/garagebox-verhuur-software", "Garageboxen"],
+                ["/container-opslag-software", "Containeropslag"]
               ].map(([href, label]) => (
-                <Link key={href} href={href} className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm font-semibold text-slate-700 hover:bg-slate-100 hover:text-slate-950">
-                  {label}
-                </Link>
+                <Link key={href} href={href} className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm font-semibold text-slate-700 hover:bg-slate-100 hover:text-slate-950">{label}</Link>
               ))}
             </div>
           </div>
         </section>
 
         <FaqSection faqs={faqs} />
-        <CtaSection title="Klaar om je opslaglocatie boekbaar en omzetgerichter te maken?" copy="Plan een demo of bekijk de interactieve demo om te zien hoe booking, Market Radar en revenue decisions samenkomen." primary={{ label: "Plan demo", href: siteConfig.email }} secondary={{ label: "Bekijk demo", href: "/demo" }} />
+        <PageSpecificCta title="Plan een Benelux storage pilot." copy="Bekijk hoe StorageYield je bestaande website boekbaar maakt en omzetbeslissingen zichtbaar maakt zonder integraties te overclaimen." />
       </main>
       <MarketingFooter />
-      <JsonLd data={{ "@context": "https://schema.org", "@type": "Organization", name: siteConfig.name, url: siteConfig.url, description: siteConfig.description }} />
-      <JsonLd data={{ "@context": "https://schema.org", "@type": "SoftwareApplication", name: siteConfig.name, applicationCategory: "BusinessApplication", operatingSystem: "Web", url: siteConfig.url, description: siteConfig.description, offers: { "@type": "Offer", price: "0", priceCurrency: "EUR" } }} />
+      <OrganizationJsonLd />
+      <SoftwareJsonLd url={siteConfig.url} description={siteConfig.description} />
       <JsonLd data={{ "@context": "https://schema.org", "@type": "FAQPage", mainEntity: faqs.map((faq) => ({ "@type": "Question", name: faq.question, acceptedAnswer: { "@type": "Answer", text: faq.answer } })) }} />
     </>
   );

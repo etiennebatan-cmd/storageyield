@@ -5,6 +5,7 @@ const columns = [
   {
     title: "Product",
     links: [
+      { href: "/platform", label: "Platform overview" },
       { href: "/self-storage-software", label: "Self-storage software" },
       { href: "/opslagruimte-reserveringssysteem", label: "Online reserveringen" },
       { href: "/onbemande-self-storage-software", label: "Onbemande workflows" },

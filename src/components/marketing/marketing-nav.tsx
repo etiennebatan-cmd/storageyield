@@ -3,9 +3,12 @@ import { ArrowRight } from "lucide-react";
 import { siteConfig } from "@/lib/marketing/site-config";
 
 const productLinks = [
+  { href: "/platform", label: "Platform overview" },
   { href: "/self-storage-software", label: "Self-storage software" },
   { href: "/opslagruimte-reserveringssysteem", label: "Online reserveringen" },
+  { href: "/platform#resources", label: "Facility & resource management" },
   { href: "/onbemande-self-storage-software", label: "Onbemande workflows" },
+  { href: "/self-storage-facturatie", label: "Facturatie & betalingen" },
   { href: "/self-storage-prijsoptimalisatie", label: "Revenue intelligence" }
 ];
 
@@ -19,6 +22,7 @@ const solutionLinks = [
 const beneluxLinks = [
   { href: "/self-storage-software-nederland", label: "Nederland" },
   { href: "/self-storage-software-belgie", label: "België" },
+  { href: "/onbemande-self-storage-software", label: "Onbemande locaties" },
   { href: "/self-storage-facturatie", label: "Facturatie & compliance" }
 ];
 

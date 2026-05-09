@@ -10,6 +10,7 @@ export const siteConfig = {
 
 export const marketingPaths = [
   "/",
+  "/platform",
   "/self-storage-software",
   "/onbemande-self-storage-software",
   "/opslagruimte-reserveringssysteem",
