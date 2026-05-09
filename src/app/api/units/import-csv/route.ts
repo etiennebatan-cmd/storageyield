@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { requireOrganizationAccess } from "@/lib/server/org-access";
 
 const unitStatuses = new Set(["available", "occupied", "reserved", "maintenance", "unavailable"]);
 const tenantTypes = new Set(["private", "business", "unknown"]);
@@ -24,18 +24,12 @@ export async function POST(request: Request) {
   if (!facilityId || !(file instanceof File)) return NextResponse.json({ error: "Missing facility_id or file" }, { status: 400 });
   const text = await file.text();
   const rows = parseCsv(text);
-  const supabase = createClient();
-  const { data: userData, error: authError } = await supabase.auth.getUser();
-  if (authError || !userData.user) return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+  const access = await requireOrganizationAccess();
+  if ("error" in access) return access.error;
+  const { supabase, organizationIds } = access;
 
-  const { data: facility, error: facilityError } = await supabase.from("facilities").select("id,organization_id").eq("id", facilityId).single();
-  if (facilityError || !facility) return NextResponse.json({ error: "Facility not found" }, { status: 404 });
-  const { data: organization, error: organizationError } = await supabase
-    .from("organizations")
-    .select("id")
-    .eq("id", facility.organization_id)
-    .single();
-  if (organizationError || !organization) return NextResponse.json({ error: "Facility not found" }, { status: 404 });
+  const { data: facility, error: facilityError } = await supabase.from("facilities").select("id,organization_id").eq("id", facilityId).in("organization_id", organizationIds).single();
+  if (facilityError || !facility) return NextResponse.json({ error: "Facility access required" }, { status: 403 });
 
   const { data: unitTypes } = await supabase.from("unit_types").select("id,name,size_m2").eq("facility_id", facilityId);
   const utByName = new Map((unitTypes ?? []).map((u) => [u.name.toLowerCase(), u]));

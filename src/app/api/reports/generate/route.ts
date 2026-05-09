@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { subDays } from "date-fns";
-import { createClient } from "@/lib/supabase/server";
+import { requireOrganizationAccess } from "@/lib/server/org-access";
 import { calculateFacilityMetrics } from "@/lib/calculations/metrics";
 import { buildCompetitorEvidenceByUnitType, summarizeCompetitorSignals } from "@/lib/competitors/insights";
 import { fetchCompetitorEvidenceRows } from "@/lib/competitors/queries";
@@ -12,21 +12,15 @@ export async function POST(request: Request) {
   const body = await request.json();
   const parsed = schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-  const supabase = createClient();
-  const { data: userData, error: authError } = await supabase.auth.getUser();
-  if (authError || !userData.user) return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+  const access = await requireOrganizationAccess(parsed.data.organization_id);
+  if ("error" in access) return access.error;
+  const { supabase, organizationIds } = access;
 
-  const facilityQuery = supabase.from("facilities").select("id,organization_id").limit(1);
+  const facilityQuery = supabase.from("facilities").select("id,organization_id").in("organization_id", organizationIds).limit(1);
   if (parsed.data.facility_id) facilityQuery.eq("id", parsed.data.facility_id);
   const { data: facilities, error: facilityError } = await facilityQuery;
   const facility = facilities?.[0];
-  if (facilityError || !facility) return NextResponse.json({ error: "Facility not found" }, { status: 404 });
-  const { data: organization, error: organizationError } = await supabase
-    .from("organizations")
-    .select("id")
-    .eq("id", facility.organization_id)
-    .single();
-  if (organizationError || !organization) return NextResponse.json({ error: "Facility not found" }, { status: 404 });
+  if (facilityError || !facility) return NextResponse.json({ error: "Facility access required" }, { status: 403 });
 
   const periodEnd = new Date();
   const periodStart = subDays(periodEnd, 7);
@@ -38,10 +32,10 @@ export async function POST(request: Request) {
     .select("id,facility_id,name,size_m2,description,current_street_rate_monthly");
   unitsQ.eq("facility_id", facility.id);
   unitTypesQ.eq("facility_id", facility.id);
-  const [{ data: units }, { data: unitTypes }, { data: recs }, competitorRows] = await Promise.all([
+  const [{ data: units }, { data: unitTypes }, { data: actions }, competitorRows] = await Promise.all([
     unitsQ,
     unitTypesQ,
-    supabase.from("recommendations").select("title,priority,status,estimated_monthly_uplift").eq("facility_id", facility.id),
+    supabase.from("actions").select("title,priority,status,estimated_monthly_uplift").eq("facility_id", facility.id),
     fetchCompetitorEvidenceRows(supabase, facility.id)
   ]);
   const metrics = calculateFacilityMetrics((units ?? []) as never[], (unitTypes ?? []) as never[]);
@@ -64,7 +58,7 @@ export async function POST(request: Request) {
       period_end: periodEnd.toISOString().slice(0, 10),
       summary,
       metrics: { ...metrics, competitor_watch: competitorSignals },
-      recommendations: recs ?? []
+      recommendations: actions ?? []
     })
     .select("id")
     .single();

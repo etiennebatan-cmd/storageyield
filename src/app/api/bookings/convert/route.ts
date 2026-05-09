@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
+import { requireOrganizationAccess } from "@/lib/server/org-access";
 
 const schema = z.object({
   booking_id: z.string().uuid(),
@@ -13,24 +13,17 @@ export async function POST(request: Request) {
   const parsed = schema.safeParse(await request.json());
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 
-  const supabase = createClient();
-  const { data: userData, error: authError } = await supabase.auth.getUser();
-  if (authError || !userData.user) return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+  const access = await requireOrganizationAccess();
+  if ("error" in access) return access.error;
+  const { supabase, organizationIds } = access;
 
   const { data: booking, error: bookingError } = await supabase
     .from("booking_requests")
     .select("id,organization_id,facility_id,unit_type_id,customer_name,customer_type,quoted_monthly_rate")
     .eq("id", parsed.data.booking_id)
+    .in("organization_id", organizationIds)
     .single();
-  if (bookingError || !booking) return NextResponse.json({ error: "Booking not found" }, { status: 404 });
-
-  const { data: membership } = await supabase
-    .from("organization_members")
-    .select("id")
-    .eq("organization_id", booking.organization_id)
-    .eq("user_id", userData.user.id)
-    .single();
-  if (!membership) return NextResponse.json({ error: "Organization access required" }, { status: 403 });
+  if (bookingError || !booking) return NextResponse.json({ error: "Booking access required" }, { status: 403 });
 
   const { data: unit, error: unitError } = await supabase
     .from("units")

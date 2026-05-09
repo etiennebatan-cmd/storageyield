@@ -1,4 +1,4 @@
-import { CampaignsWorkspace } from "@/components/app/live-cockpit";
+import { CampaignsWorkspace } from "@/components/campaign-playbooks/campaign-playbooks-workspace";
 
 export default function CampaignsPage() {
   return (

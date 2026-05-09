@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
+import { requireOrganizationAccess } from "@/lib/server/org-access";
 
 const schema = z.object({
   name: z.string().min(2),
@@ -21,24 +21,27 @@ export async function POST(request: Request) {
   const parsed = schema.safeParse(await request.json());
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 
-  const supabase = createClient();
-  const { data: userData, error: authError } = await supabase.auth.getUser();
-  if (authError || !userData.user) return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+  const access = await requireOrganizationAccess();
+  if ("error" in access) return access.error;
+  const { supabase, organizationIds } = access;
 
   const { data: facility, error: facilityError } = await supabase
     .from("facilities")
     .select("id,organization_id")
     .eq("id", parsed.data.facility_id)
+    .in("organization_id", organizationIds)
     .single();
-  if (facilityError || !facility) return NextResponse.json({ error: "Facility not found" }, { status: 404 });
+  if (facilityError || !facility) return NextResponse.json({ error: "Facility access required" }, { status: 403 });
 
-  const { data: membership } = await supabase
-    .from("organization_members")
-    .select("id")
-    .eq("organization_id", facility.organization_id)
-    .eq("user_id", userData.user.id)
-    .single();
-  if (!membership) return NextResponse.json({ error: "Organization access required" }, { status: 403 });
+  if (parsed.data.target_unit_type_id) {
+    const { data: unitType } = await supabase
+      .from("unit_types")
+      .select("id")
+      .eq("id", parsed.data.target_unit_type_id)
+      .eq("facility_id", facility.id)
+      .single();
+    if (!unitType) return NextResponse.json({ error: "Target unit type must belong to this facility" }, { status: 400 });
+  }
 
   const startDate = parsed.data.start_date ?? new Date().toISOString().slice(0, 10);
   const endDate = parsed.data.end_date ?? new Date(Date.now() + 1000 * 60 * 60 * 24 * 30).toISOString().slice(0, 10);

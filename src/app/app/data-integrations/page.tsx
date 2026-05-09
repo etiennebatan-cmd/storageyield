@@ -1,4 +1,4 @@
-import { SettingsWorkspace } from "@/components/app/live-cockpit";
+import { DataIntegrationsWorkspace } from "@/components/data-integrations/data-integrations-workspace";
 
 export default function DataIntegrationsPage() {
   return (
@@ -8,7 +8,7 @@ export default function DataIntegrationsPage() {
         <h1 className="mt-2 text-5xl font-semibold tracking-tight text-slate-950">Data & Integrations</h1>
         <p className="mt-2 text-lg text-slate-600">Connect booking demand, market observations, pricing rules and data health checks that feed decisions.</p>
       </div>
-      <SettingsWorkspace />
+      <DataIntegrationsWorkspace />
     </div>
   );
 }

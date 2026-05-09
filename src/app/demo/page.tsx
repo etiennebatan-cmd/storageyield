@@ -62,7 +62,7 @@ export default function DemoPage() {
                 A simple, modern cockpit that brings occupancy, pricing, competitor insights and action items into one practical workflow.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
-                <Link className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800" href="/app">
+                <Link className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800" href="/app/decisions?demo=1">
                   Open operator cockpit <ArrowRight className="h-4 w-4" />
                 </Link>
                 <Link className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition hover:border-slate-400" href="/widget/brussels-north-storage">
@@ -141,7 +141,7 @@ export default function DemoPage() {
 
         <div className="mt-12 grid gap-6 lg:grid-cols-3">
           {[
-            ["Pricing intelligence", "Signal-led pricing recommendations for units that are under market or showing strong demand."],
+            ["Pricing intelligence", "Signal-led pricing decisions for units that are under market or showing strong demand."],
             ["Action feed", "Clear next steps from the system without guessing what to focus on first."],
             ["Independent focus", "Designed for small portfolios with low setup, fast adoption and operational clarity."]
           ].map(([title, copy]) => (

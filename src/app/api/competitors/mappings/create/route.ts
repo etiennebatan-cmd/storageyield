@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
+import { requireOrganizationAccess } from "@/lib/server/org-access";
 
 const schema = z.object({
   facility_id: z.string().uuid(),
@@ -15,14 +15,17 @@ export async function POST(request: Request) {
   const parsed = schema.safeParse(await request.json());
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 
-  const supabase = createClient();
-  const { data: userData, error: authError } = await supabase.auth.getUser();
-  if (authError || !userData.user) return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+  const access = await requireOrganizationAccess();
+  if ("error" in access) return access.error;
+  const { supabase, organizationIds } = access;
 
-  const [{ data: ownUnitType }, { data: competitorUnitType }] = await Promise.all([
+  const [{ data: facility }, { data: competitor }, { data: ownUnitType }, { data: competitorUnitType }] = await Promise.all([
+    supabase.from("facilities").select("id,organization_id").eq("id", parsed.data.facility_id).in("organization_id", organizationIds).single(),
+    supabase.from("competitors").select("id,organization_id").eq("id", parsed.data.competitor_id).in("organization_id", organizationIds).single(),
     supabase.from("unit_types").select("id,facility_id").eq("id", parsed.data.own_unit_type_id).eq("facility_id", parsed.data.facility_id).single(),
     supabase.from("competitor_unit_types").select("id,competitor_id").eq("id", parsed.data.competitor_unit_type_id).eq("competitor_id", parsed.data.competitor_id).single()
   ]);
+  if (!facility || !competitor) return NextResponse.json({ error: "Organization access required" }, { status: 403 });
   if (!ownUnitType || !competitorUnitType) return NextResponse.json({ error: "Unit mapping does not match this facility and competitor" }, { status: 400 });
 
   const { data, error } = await supabase.from("competitor_unit_mappings").upsert(

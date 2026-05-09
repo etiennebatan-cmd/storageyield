@@ -22,14 +22,14 @@ Primary product areas:
 ## Local Setup
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
 Open:
 
-- App: `http://localhost:3000/app`
-- Decision Inbox: `http://localhost:3000/app/decisions`
+- Production app: `http://localhost:3000/app/decisions`
+- Demo workspace: `http://localhost:3000/app/decisions?demo=1`
 - Demo widget: `http://localhost:3000/widget/brussels-north-storage`
 - Demo widget redirect: `http://localhost:3000/demo/widget`
 
@@ -37,11 +37,16 @@ Open:
 
 Copy `.env.example` to `.env.local`.
 
-Demo mode works without Supabase when:
+Demo routes work without Supabase:
+
+- `/demo`
+- `/app/*?demo=1`
+- `/widget/brussels-north-storage`
+
+Force the whole app into demo mode only for local presentation:
 
 ```bash
-STORAGEYIELD_DEMO_MODE=true
-NEXT_PUBLIC_STORAGEYIELD_DEMO_MODE=true
+NEXT_PUBLIC_STORAGEYIELD_FORCE_DEMO=true
 ```
 
 Production mode requires:
@@ -51,7 +56,7 @@ Production mode requires:
 - `SUPABASE_SERVICE_ROLE_KEY` for seed/simulation scripts
 - `RESEND_API_KEY` optional
 
-Set `STORAGEYIELD_DEMO_MODE=false` and `NEXT_PUBLIC_STORAGEYIELD_DEMO_MODE=false` to require Supabase auth for `/app`.
+By default `/app/*` uses production mode and loads Supabase-backed state. It does not silently fall back to demo data.
 
 ## Supabase Setup
 
@@ -69,14 +74,14 @@ Demo mode uses seeded data and localStorage. It is meant for live product demos 
 
 Working demo loop:
 
-1. Open `/app/decisions`.
+1. Open `/app/decisions?demo=1`.
 2. Approve a pricing decision.
 3. Confirm the visible unit price changes in Pricing Lab.
 4. Open `/widget/brussels-north-storage`.
 5. Submit a booking request.
-6. Return to `/app/booking-conversion`.
+6. Return to `/app/booking-conversion?demo=1`.
 7. Move the booking through contacted/reserved/converted.
-8. Open `/app/impact-report` and confirm the report reflects approved decisions or booking conversions.
+8. Open `/app/impact-report?demo=1` and confirm the report reflects approved decisions or booking conversions.
 
 To reset demo state, use Data & Integrations or clear `storageyield.demoState` in localStorage.
 
@@ -143,19 +148,20 @@ Run before handing off:
 npm run typecheck
 npm run lint
 npm run build
+npm run test:acceptance
 ```
 
 Manual acceptance checklist:
 
 - Open `/demo`.
-- Open `/app/decisions`.
+- Open `/app/decisions?demo=1`.
 - View evidence for a pricing decision.
 - Approve a pricing decision.
 - Confirm unit type price changed.
-- Open `/app/impact-report` and confirm approved action appears.
+- Open `/app/impact-report?demo=1` and confirm approved action appears.
 - Open `/widget/brussels-north-storage`.
 - Submit booking request.
-- Confirm booking appears in `/app/booking-conversion`.
+- Confirm booking appears in `/app/booking-conversion?demo=1`.
 - Convert booking and assign a unit.
 - Confirm unit becomes occupied and report updates.
 - Add competitor price observation.

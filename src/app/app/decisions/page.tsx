@@ -1,4 +1,4 @@
-import { DecisionInboxWorkspace } from "@/components/app/live-cockpit";
+import { DecisionInboxWorkspace } from "@/components/decision-inbox/decision-inbox-workspace";
 
 export default function DecisionInboxPage() {
   return <DecisionInboxWorkspace />;

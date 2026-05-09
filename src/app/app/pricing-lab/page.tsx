@@ -1,4 +1,4 @@
-import { UnitsPricingWorkspace } from "@/components/app/live-cockpit";
+import { PricingLabWorkspace } from "@/components/pricing-lab/pricing-lab-workspace";
 
 export default function PricingLabPage() {
   return (
@@ -10,7 +10,7 @@ export default function PricingLabPage() {
           <p className="mt-2 text-lg text-slate-600">See which unit types to raise, hold, discount, remap or test next.</p>
         </div>
       </div>
-      <UnitsPricingWorkspace />
+      <PricingLabWorkspace />
     </div>
   );
 }

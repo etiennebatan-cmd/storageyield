@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
+import { requireOrganizationAccess } from "@/lib/server/org-access";
 
 const schema = z.object({
   competitor_id: z.string().uuid(),
@@ -18,9 +18,27 @@ export async function POST(request: Request) {
   const parsed = schema.safeParse(await request.json());
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 
-  const supabase = createClient();
-  const { data: userData, error: authError } = await supabase.auth.getUser();
-  if (authError || !userData.user) return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+  const access = await requireOrganizationAccess();
+  if ("error" in access) return access.error;
+  const { supabase, organizationIds } = access;
+
+  const { data: competitor } = await supabase
+    .from("competitors")
+    .select("id")
+    .eq("id", parsed.data.competitor_id)
+    .in("organization_id", organizationIds)
+    .single();
+  if (!competitor) return NextResponse.json({ error: "Competitor access required" }, { status: 403 });
+
+  if (parsed.data.competitor_unit_type_id) {
+    const { data: competitorUnitType } = await supabase
+      .from("competitor_unit_types")
+      .select("id")
+      .eq("id", parsed.data.competitor_unit_type_id)
+      .eq("competitor_id", parsed.data.competitor_id)
+      .single();
+    if (!competitorUnitType) return NextResponse.json({ error: "Competitor unit type does not belong to this competitor" }, { status: 403 });
+  }
 
   const observedAt = new Date(parsed.data.observed_at).toISOString();
   const { data, error } = await supabase.from("competitor_price_observations").insert({

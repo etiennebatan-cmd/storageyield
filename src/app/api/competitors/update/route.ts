@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
+import { requireOrganizationAccess } from "@/lib/server/org-access";
 
 const schema = z.object({
   competitor_id: z.string().uuid(),
@@ -17,9 +17,17 @@ export async function POST(request: Request) {
   const parsed = schema.safeParse(await request.json());
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 
-  const supabase = createClient();
-  const { data: userData, error: authError } = await supabase.auth.getUser();
-  if (authError || !userData.user) return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+  const access = await requireOrganizationAccess();
+  if ("error" in access) return access.error;
+  const { supabase, organizationIds } = access;
+
+  const { data: competitor } = await supabase
+    .from("competitors")
+    .select("id,organization_id")
+    .eq("id", parsed.data.competitor_id)
+    .in("organization_id", organizationIds)
+    .single();
+  if (!competitor) return NextResponse.json({ error: "Competitor access required" }, { status: 403 });
 
   const update: Record<string, string | null> = {};
   if (parsed.data.name !== undefined) update.name = parsed.data.name.trim();
@@ -30,7 +38,7 @@ export async function POST(request: Request) {
   if (parsed.data.notes !== undefined) update.notes = parsed.data.notes || null;
   if (parsed.data.status !== undefined) update.status = parsed.data.status;
 
-  const { error } = await supabase.from("competitors").update(update).eq("id", parsed.data.competitor_id);
+  const { error } = await supabase.from("competitors").update(update).eq("id", parsed.data.competitor_id).in("organization_id", organizationIds);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
 }

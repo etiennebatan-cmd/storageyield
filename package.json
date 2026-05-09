@@ -10,7 +10,8 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "seed:demo": "tsx scripts/seed-demo.ts",
-    "simulate:flow": "node --env-file=.env.local scripts/simulate-flow.mjs"
+    "simulate:flow": "node --env-file=.env.local scripts/simulate-flow.mjs",
+    "test:acceptance": "node scripts/acceptance-demo-flow.mjs"
   },
   "keywords": [],
   "author": "",

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
+import { requireOrganizationAccess } from "@/lib/server/org-access";
 
 const schema = z.object({
   unit_type_id: z.string().uuid(),
@@ -11,9 +11,9 @@ export async function POST(request: Request) {
   const parsed = schema.safeParse(await request.json());
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 
-  const supabase = createClient();
-  const { data: userData, error: authError } = await supabase.auth.getUser();
-  if (authError || !userData.user) return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+  const access = await requireOrganizationAccess();
+  if ("error" in access) return access.error;
+  const { supabase, organizationIds } = access;
 
   const { data: unitType, error: lookupError } = await supabase
     .from("unit_types")
@@ -24,15 +24,7 @@ export async function POST(request: Request) {
 
   const facility = Array.isArray(unitType.facilities) ? unitType.facilities[0] : unitType.facilities;
   const organizationId = facility?.organization_id;
-  if (!organizationId) return NextResponse.json({ error: "Facility not found" }, { status: 404 });
-
-  const { data: membership } = await supabase
-    .from("organization_members")
-    .select("id")
-    .eq("organization_id", organizationId)
-    .eq("user_id", userData.user.id)
-    .single();
-  if (!membership) return NextResponse.json({ error: "Organization access required" }, { status: 403 });
+  if (!organizationId || !organizationIds.includes(organizationId)) return NextResponse.json({ error: "Organization access required" }, { status: 403 });
 
   const oldPrice = Number(unitType.current_street_rate_monthly);
   const { data: updated, error } = await supabase

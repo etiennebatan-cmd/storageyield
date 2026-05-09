@@ -1,4 +1,4 @@
-import { SignalsWorkspace } from "@/components/app/live-cockpit";
+import { SignalsWorkspace } from "@/components/signals/signals-workspace";
 
 export default function SignalsPage() {
   return (
