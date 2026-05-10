@@ -10,7 +10,7 @@ export function PaymentFlowPreview() {
 
   return (
     <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-xl">
-      <p className="text-xs font-black uppercase tracking-[0.24em] text-emerald-600">Invoice lifecycle</p>
+      <p className="text-xs font-black uppercase tracking-[0.24em] text-emerald-600">Invoice workflow</p>
       <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">Betaling en facturatie zonder overclaim</h2>
       <div className="mt-6 grid gap-3">
         {steps.map(([label, status]) => (

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ComparisonTable } from "@/components/marketing/comparison-table";
 import { FaqSection } from "@/components/marketing/faq-section";
 import { OrganizationJsonLd, SoftwareJsonLd } from "@/components/marketing/json-ld";
-import { LifecycleFlow } from "@/components/marketing/lifecycle-flow";
+import { ProcessFlow } from "@/components/marketing/lifecycle-flow";
 import { MarketingFooter } from "@/components/marketing/marketing-footer";
 import { MarketingNav } from "@/components/marketing/marketing-nav";
 import { ModuleShowcase } from "@/components/marketing/module-showcase";
@@ -54,7 +54,7 @@ export default function SelfStorageSoftwarePage() {
           modules={[
             { title: "Sell", copy: "Hosted booking page, booking pipeline, lead scoring en follow-up.", status: "Beschikbaar" },
             { title: "Manage", copy: "Facilities, unit types, units, resource status en pricing setup.", status: "Pilot" },
-            { title: "Automate", copy: "Contracts, payments, identity en access lifecycle als roadmap.", status: "Roadmap" },
+            { title: "Automate", copy: "Contracts, payments, identity en access workflows als roadmap.", status: "Roadmap" },
             { title: "Optimise", copy: "Market Radar, Pricing Lab, Decision Inbox en Impact Report.", status: "Beschikbaar" }
           ]}
           columns={4}
@@ -71,13 +71,13 @@ export default function SelfStorageSoftwarePage() {
           ]}
         />
 
-        <LifecycleFlow
+        <ProcessFlow
           title="Benelux requirements in het productontwerp"
           steps={[
             { title: "NL/FR/EN", copy: "Meertalige klantflows als uitgangspunt.", status: "Pilot" },
             { title: "iDEAL/Bancontact/SEPA", copy: "Lokale betaalflows voorbereid als roadmap.", status: "Roadmap" },
             { title: "PEPPOL-ready", copy: "E-facturatie-readiness zonder live claim.", status: "Roadmap" },
-            { title: "Unmanned flow", copy: "Booking, contract, payment en access lifecycle als ontwerpprincipe.", status: "Pilot" }
+            { title: "Unmanned flow", copy: "Booking, contract, payment en access workflow als ontwerpprincipe.", status: "Pilot" }
           ]}
         />
 

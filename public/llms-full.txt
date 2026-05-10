@@ -1,0 +1,6 @@
+StorageYield public LLM listing (full)
+- site: https://storageyield.com
+- brand: StorageYield
+- market: Benelux self-storage, garagebox en containeropslag operators
+- pages: homepage, platform, self-storage, unmanned workflows, booking system, access workflows, billing, pricing intelligence, demo, signup
+- contact: hello@storageyield.com

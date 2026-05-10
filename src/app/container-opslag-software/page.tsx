@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { LifecycleFlow } from "@/components/marketing/lifecycle-flow";
+import { ProcessFlow } from "@/components/marketing/lifecycle-flow";
 import { MarketingFooter } from "@/components/marketing/marketing-footer";
 import { MarketingNav } from "@/components/marketing/marketing-nav";
 import { ModuleShowcase } from "@/components/marketing/module-showcase";
@@ -34,7 +34,7 @@ export default function ContainerStoragePage() {
             <p className="mt-4 text-sm font-semibold text-slate-600">Container yard resource view · availability · business demand</p>
           </div>
         </section>
-        <LifecycleFlow
+        <ProcessFlow
           title="Container storage als hybride opslagmodel"
           steps={[
             { title: "Resource-first", copy: "Container als resource met beschikbaarheid en tarief.", status: "Pilot" },

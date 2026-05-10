@@ -80,7 +80,7 @@ export const seoPages: Record<string, SeoPage> = {
     modules: [
       { title: "Hosted booking page", copy: "Maak een bestaande website boekbaar met een publieke reserveringspagina, knop of iframe.", status: "Live MVP" },
       { title: "Resource management", copy: "Beheer unit types, units/resources, beschikbaarheid, tarieven en status zonder een volledig PMS te vervangen.", status: "Live MVP" },
-      { title: "Customer lifecycle", copy: "Van aanvraag naar reservering, contactmoment, conversie en impactrapport.", status: "Live MVP" },
+      { title: "Customer journey", copy: "Van aanvraag naar reservering, contactmoment, conversie en impactrapport.", status: "Live MVP" },
       ...beneluxProof,
       ...revenueModules
     ],
@@ -231,9 +231,9 @@ export const seoPages: Record<string, SeoPage> = {
     ctaHref: siteConfig.email,
     secondaryCtaLabel: "Bekijk onbemande flow",
     secondaryCtaHref: "/onbemande-self-storage-software",
-    intro: "Toegangscontrole is vaak de stap die onbemande opslag complex maakt. StorageYield positioneert toegang als lifecycle: reserveren, betalen, toegang activeren, bij achterstand pauzeren en bij move-out intrekken.",
+    intro: "Toegangscontrole is vaak de stap die onbemande opslag complex maakt. StorageYield positioneert toegang als workflow: reserveren, betalen, toegang activeren, bij achterstand pauzeren en bij move-out intrekken.",
     modules: [
-      { title: "Access lifecycle", copy: "Koppel toegangsstatus aan boeking, betaling en move-out logica.", status: "Workflow" },
+      { title: "Access workflow", copy: "Koppel toegangsstatus aan boeking, betaling en move-out logica.", status: "Workflow" },
       { title: "Hardware-agnostisch", copy: "Geen lock-in claim: integraties worden per pilot en hardware onderzocht.", status: "Roadmap" },
       { title: "Fallback", copy: "Noodtoegang, override en audit trail blijven belangrijk.", status: "Pilot" },
       { title: "Operator queue", copy: "Zicht op aanvragen waar toegang nog handmatig moet worden bevestigd.", status: "Live MVP" }
@@ -251,7 +251,7 @@ export const seoPages: Record<string, SeoPage> = {
     faqs: [
       { question: "Heeft StorageYield live toegangscontrole?", answer: "Nee, niet als standaard MVP-feature. Toegangscontrole is een readiness- en roadmapgebied voor pilots." },
       { question: "Kan ik mijn bestaande hardware behouden?", answer: "Het uitgangspunt is hardware-agnostisch, maar integraties worden per pilot beoordeeld." },
-      { question: "Waarom staat dit dan op de site?", answer: "Omdat onbemande storage zonder toegangsworkflow niet compleet is; StorageYield maakt deze lifecycle expliciet." }
+      { question: "Waarom staat dit dan op de site?", answer: "Omdat onbemande storage zonder toegangsworkflow niet compleet is; StorageYield maakt deze workflow expliciet." }
     ]
   },
   "/self-storage-facturatie": {

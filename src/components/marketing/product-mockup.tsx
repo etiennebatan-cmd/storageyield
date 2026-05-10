@@ -5,12 +5,12 @@ type ProductMockupVariant = "platform" | "booking" | "decision" | "billing" | "a
 const mockups: Record<ProductMockupVariant, { title: string; subtitle: string; panels: Array<{ title: string; value: string; status: "Beschikbaar" | "Pilot" | "Roadmap" }> }> = {
   platform: {
     title: "StorageYield OS",
-    subtitle: "Booking, resources, lifecycle en revenue intelligence in één operatorlaag.",
+    subtitle: "Booking, resources, workflow en revenue intelligence in één operatorlaag.",
     panels: [
       { title: "Booking requests", value: "18 open", status: "Beschikbaar" },
       { title: "Resource occupancy", value: "84%", status: "Pilot" },
       { title: "Revenue decisions", value: "€2.925/mo", status: "Beschikbaar" },
-      { title: "Access/payment lifecycle", value: "Prepared", status: "Roadmap" }
+      { title: "Access/payment workflow", value: "Prepared", status: "Roadmap" }
     ]
   },
   booking: {
@@ -44,7 +44,7 @@ const mockups: Record<ProductMockupVariant, { title: string; subtitle: string; p
     ]
   },
   access: {
-    title: "Access lifecycle",
+    title: "Access workflow",
     subtitle: "Van reservering naar toegang, non-payment suspension en move-out revocation.",
     panels: [
       { title: "Manual exception", value: "Queue", status: "Pilot" },

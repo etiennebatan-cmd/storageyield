@@ -3,7 +3,7 @@ import { FileSignature } from "lucide-react";
 import { FeatureStatusBadge } from "@/components/marketing/feature-status-badge";
 import { FaqSection } from "@/components/marketing/faq-section";
 import { FeaturePageHero } from "@/components/marketing/feature-page-hero";
-import { LifecycleFlow } from "@/components/marketing/lifecycle-flow";
+import { ProcessFlow } from "@/components/marketing/lifecycle-flow";
 import { MarketingFooter } from "@/components/marketing/marketing-footer";
 import { MarketingNav } from "@/components/marketing/marketing-nav";
 import { ModuleShowcase } from "@/components/marketing/module-showcase";
@@ -75,8 +75,8 @@ export default function ContractPage() {
           ]}
           columns={4}
         />
-        <LifecycleFlow
-          title="Identity en contract lifecycle"
+        <ProcessFlow
+          title="Identity en contractflow"
           steps={[
             { title: "Klantgegevens", copy: "Booking data en klanttype als startpunt.", status: "Beschikbaar" },
             { title: "ID-verificatie", copy: "itsme/ID provider roadmap met manual fallback.", status: "Roadmap" },

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ComparisonTable } from "@/components/marketing/comparison-table";
 import { OrganizationJsonLd, SoftwareJsonLd } from "@/components/marketing/json-ld";
-import { LifecycleFlow } from "@/components/marketing/lifecycle-flow";
+import { ProcessFlow } from "@/components/marketing/lifecycle-flow";
 import { MarketingFooter } from "@/components/marketing/marketing-footer";
 import { MarketingNav } from "@/components/marketing/marketing-nav";
 import { ModuleShowcase } from "@/components/marketing/module-showcase";
@@ -13,17 +13,17 @@ import { pageUrl } from "@/lib/marketing/seo-pages";
 
 export const metadata: Metadata = {
   title: "StorageYield platform voor opslagoperators",
-  description: "Eén platform voor online verkoop, resource management, customer lifecycle en revenue intelligence voor Benelux opslaglocaties.",
+  description: "Eén platform voor online verkoop, resource management, customer journey en revenue intelligence voor Benelux opslaglocaties.",
   alternates: { canonical: pageUrl("/platform") }
 };
 
 const layers = [
   { title: "Website & booking", copy: "Hosted booking pages, website button, iframe, QR-code en Google Business Profile link.", status: "Beschikbaar" as const },
   { title: "Facility/resources", copy: "Facilities, unit types, units, garageboxen, containers en hybride resources.", status: "Pilot" as const },
-  { title: "Customer lifecycle", copy: "Lead score, pipeline, follow-up, conversion en impactrapport.", status: "Beschikbaar" as const },
+  { title: "Customer journey", copy: "Lead score, pipeline, follow-up, conversion en impactrapport.", status: "Beschikbaar" as const },
   { title: "Contracts/identity", copy: "itsme, ID verificatie, e-signature en taal/jurisdictielogica als roadmap.", status: "Roadmap" as const },
   { title: "Payments/billing", copy: "iDEAL, Bancontact, SEPA, VAT, structured references en PEPPOL readiness.", status: "Roadmap" as const },
-  { title: "Access", copy: "PIN, QR, mobile unlock, non-payment suspension en move-out revocation als lifecycle.", status: "Roadmap" as const },
+  { title: "Access", copy: "PIN, QR, mobile unlock, non-payment suspension en move-out revocation als workflow-readiness.", status: "Roadmap" as const },
   { title: "Intelligence", copy: "Decision Inbox, Market Radar, Pricing Lab en Impact Report.", status: "Beschikbaar" as const },
   { title: "Reporting/API", copy: "Weekly reports, exports en toekomstige API/integratie-ecosysteem.", status: "Pilot" as const }
 ];
@@ -36,7 +36,7 @@ export default function PlatformPage() {
         <PlatformHero
           eyebrow="Platform overview"
           title="Eén platform voor verkoop, operatie en revenue intelligence"
-          subtitle="StorageYield brengt booking, resources, customer lifecycle en beslissingen samen in een Benelux-native operating layer."
+          subtitle="StorageYield brengt booking, resources, customer journey en beslissingen samen in een Benelux-native operating layer."
           primaryHref="mailto:hello@storageyield.com"
           primaryLabel="Plan demo"
           secondaryHref="/demo"
@@ -63,12 +63,12 @@ export default function PlatformPage() {
         </section>
 
         <ModuleShowcase eyebrow="Status" title="Wat is beschikbaar, pilot of roadmap?" modules={layers} columns={4} />
-        <LifecycleFlow
+        <ProcessFlow
           title="Van websitebezoek naar operatorbeslissing"
           steps={[
             { title: "Boekbaar worden", copy: "Hosted booking page en booking pipeline.", status: "Beschikbaar" },
             { title: "Resource vastleggen", copy: "Unit/resource setup en availability logic.", status: "Pilot" },
-            { title: "Lifecycle automatiseren", copy: "Contracts, payments en access readiness.", status: "Roadmap" },
+            { title: "Proces automatiseren", copy: "Contracts, payments en access readiness.", status: "Roadmap" },
             { title: "Revenue sturen", copy: "Decisions, reports en market signals.", status: "Beschikbaar" }
           ]}
         />
@@ -92,7 +92,7 @@ export default function PlatformPage() {
       </main>
       <MarketingFooter />
       <OrganizationJsonLd />
-      <SoftwareJsonLd url={pageUrl("/platform")} description="Eén platform voor online verkoop, resource management, customer lifecycle en revenue intelligence voor Benelux opslaglocaties." />
+      <SoftwareJsonLd url={pageUrl("/platform")} description="Eén platform voor online verkoop, resource management, customer journey en revenue intelligence voor Benelux opslaglocaties." />
     </>
   );
 }

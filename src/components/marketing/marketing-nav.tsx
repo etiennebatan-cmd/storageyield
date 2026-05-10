@@ -1,72 +1,124 @@
+"use client";
+
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
-import { siteConfig } from "@/lib/marketing/site-config";
+import { useState } from "react";
+import { Menu, X } from "lucide-react";
 
-const productLinks = [
-  { href: "/platform", label: "Platform overview" },
-  { href: "/self-storage-software", label: "Self-storage software" },
-  { href: "/opslagruimte-reserveringssysteem", label: "Online reserveringen" },
-  { href: "/platform#resources", label: "Facility & resource management" },
-  { href: "/onbemande-self-storage-software", label: "Onbemande workflows" },
-  { href: "/self-storage-facturatie", label: "Facturatie & betalingen" },
-  { href: "/self-storage-prijsoptimalisatie", label: "Revenue intelligence" }
+const navItems = [
+  {
+    label: "Product",
+    items: [
+      { href: "/platform", label: "Platform overview" },
+      { href: "/self-storage-software", label: "Self-storage" },
+      { href: "/opslagruimte-reserveringssysteem", label: "Online reserveringen" },
+      { href: "/onbemande-self-storage-software", label: "Onbemande workflows" },
+      { href: "/self-storage-facturatie", label: "Facturatie & betalingen" },
+      { href: "/self-storage-prijsoptimalisatie", label: "Revenue intelligence" }
+    ]
+  },
+  {
+    label: "Oplossingen",
+    items: [
+      { href: "/self-storage-software", label: "Self-storage" },
+      { href: "/garagebox-verhuur-software", label: "Garagebox verhuur" },
+      { href: "/container-opslag-software", label: "Containeropslag" },
+      { href: "/digitaal-contract-opslagruimte", label: "Contracten & facturen" }
+    ]
+  },
+  {
+    label: "Benelux",
+    items: [
+      { href: "/self-storage-software-nederland", label: "Nederland" },
+      { href: "/self-storage-software-belgie", label: "België" },
+      { href: "/onbemande-self-storage-software", label: "Onbemande locaties" }
+    ]
+  },
+  {
+    label: "Vergelijk",
+    items: [
+      { href: "/stora-alternatief", label: "Stora alternatief" }
+    ]
+  },
+  {
+    label: "Contact",
+    items: [
+      { href: "/demo", label: "Bekijk demo" },
+      { href: "/signup", label: "Start pilot" }
+    ]
+  }
 ];
-
-const solutionLinks = [
-  { href: "/garagebox-verhuur-software", label: "Garagebox verhuur" },
-  { href: "/container-opslag-software", label: "Container opslag" },
-  { href: "/self-storage-software", label: "Business storage" },
-  { href: "/opslagruimte-reserveringssysteem", label: "Statische website upgrade" }
-];
-
-const beneluxLinks = [
-  { href: "/self-storage-software-nederland", label: "Nederland" },
-  { href: "/self-storage-software-belgie", label: "België" },
-  { href: "/onbemande-self-storage-software", label: "Onbemande locaties" },
-  { href: "/self-storage-facturatie", label: "Facturatie & compliance" }
-];
-
-function Dropdown({ label, links }: { label: string; links: Array<{ href: string; label: string }> }) {
-  return (
-    <div className="group relative">
-      <button className="rounded-full px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 hover:text-slate-950" type="button">
-        {label}
-      </button>
-      <div className="invisible absolute left-0 top-10 z-20 w-72 translate-y-1 rounded-2xl border border-slate-200 bg-white p-2 opacity-0 shadow-xl transition group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
-        {links.map((link) => (
-          <Link key={link.href} className="block rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-950" href={link.href}>
-            {link.label}
-          </Link>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 export function MarketingNav() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   return (
-    <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/90 backdrop-blur">
-      <div className="mx-auto flex max-w-[1180px] items-center justify-between px-5 py-4">
-        <Link href="/" className="text-lg font-bold tracking-tight text-slate-950">
-          StorageYield
-        </Link>
-        <nav className="hidden items-center gap-1 lg:flex">
-          <Dropdown label="Product" links={productLinks} />
-          <Dropdown label="Oplossingen" links={solutionLinks} />
-          <Dropdown label="Benelux" links={beneluxLinks} />
-          <Link className="rounded-full px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 hover:text-slate-950" href="/stora-alternatief">
-            Vergelijk
+    <nav className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur-sm">
+      <div className="mx-auto max-w-[1240px] px-5">
+        <div className="flex h-16 items-center justify-between">
+          <Link href="/" className="text-xl font-bold text-slate-950">
+            StorageYield
           </Link>
-        </nav>
-        <div className="flex items-center gap-2">
-          <Link className="hidden rounded-full px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 hover:text-slate-950 sm:inline-flex" href={siteConfig.demoPath}>
-            Bekijk demo
-          </Link>
-          <Link className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:-translate-y-0.5 hover:bg-slate-800 active:translate-y-0" href={siteConfig.email}>
-            Plan demo <ArrowRight className="h-4 w-4" />
-          </Link>
+
+          <div className="hidden lg:flex lg:items-center lg:gap-8">
+            {navItems.map((group) => (
+              <div key={group.label} className="group relative">
+                <button className="flex items-center gap-1 text-sm font-semibold text-slate-700 hover:text-slate-950">
+                  {group.label}
+                  <svg className="h-4 w-4 transition-transform group-hover:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                <div className="absolute left-0 top-full mt-2 hidden w-64 rounded-lg border border-slate-200 bg-white p-4 shadow-lg group-hover:block">
+                  <div className="space-y-2">
+                    {group.items.map((item) => (
+                      <Link key={item.href} href={item.href} className="block text-sm text-slate-600 hover:text-slate-950">
+                        {item.label}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Link href="/demo" className="hidden text-sm font-semibold text-slate-700 hover:text-slate-950 lg:block">
+              Bekijk demo
+            </Link>
+            <Link href="/signup" className="hidden rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-slate-50 lg:block">
+              Start pilot
+            </Link>
+            <Link href="mailto:hello@storageyield.com" className="rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800">
+              Plan demo
+            </Link>
+            <button
+              className="lg:hidden"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </button>
+          </div>
         </div>
+
+        {mobileMenuOpen && (
+          <div className="border-t border-slate-200 lg:hidden">
+            <div className="space-y-4 py-4">
+              {navItems.map((group) => (
+                <div key={group.label}>
+                  <p className="text-sm font-semibold text-slate-950">{group.label}</p>
+                  <div className="mt-2 space-y-2">
+                    {group.items.map((item) => (
+                      <Link key={item.href} href={item.href} className="block text-sm text-slate-600 hover:text-slate-950">
+                        {item.label}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
-    </header>
+    </nav>
   );
 }

@@ -1,17 +1,17 @@
 import { FeatureStatus, FeatureStatusBadge } from "@/components/marketing/feature-status-badge";
 
-export type LifecycleStep = {
+export type FlowStep = {
   title: string;
   copy: string;
   status?: FeatureStatus;
 };
 
-export function LifecycleFlow({ title, copy, steps }: { title: string; copy?: string; steps: LifecycleStep[] }) {
+export function ProcessFlow({ title, copy, steps }: { title: string; copy?: string; steps: FlowStep[] }) {
   return (
     <section className="mx-auto max-w-[1240px] px-5 py-14">
       <div className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
         <div className="max-w-3xl">
-          <p className="text-sm font-black uppercase tracking-[0.24em] text-emerald-600">Lifecycle</p>
+          <p className="text-sm font-black uppercase tracking-[0.24em] text-emerald-600">Process</p>
           <h2 className="mt-3 text-4xl font-semibold tracking-tight text-slate-950">{title}</h2>
           {copy ? <p className="mt-4 text-lg leading-8 text-slate-600">{copy}</p> : null}
         </div>

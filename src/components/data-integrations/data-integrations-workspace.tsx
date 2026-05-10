@@ -78,10 +78,10 @@ export function DataIntegrationsWorkspace() {
             ["Manual unit setup", "Available now"],
             ["CSV import for units/prices", "Pilot-assisted"],
             ["Manual competitor observations", "Available now"],
-            ["Google Sheets sync", "Coming soon"],
-            ["PMS export import", "Coming soon"],
-            ["Stora/SiteLink/Storeganise integrations", "Coming soon"],
-            ["Payment/access-control imports", "Coming soon"]
+            ["Google Sheets sync", "Roadmap"],
+            ["PMS export import", "Roadmap"],
+            ["Stora/SiteLink/Storeganise integrations", "Roadmap"],
+            ["Payment/access-control imports", "Roadmap"]
           ].map(([label, state]) => (
             <div className="card p-5" key={label}>
               <div className="flex items-center justify-between gap-3"><h3 className="font-semibold text-slate-950">{label}</h3><PanelRightOpen className="h-5 w-5 text-slate-400" /></div>

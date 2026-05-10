@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { FeaturePageHero } from "@/components/marketing/feature-page-hero";
-import { LifecycleFlow } from "@/components/marketing/lifecycle-flow";
+import { ProcessFlow } from "@/components/marketing/lifecycle-flow";
 import { MarketingFooter } from "@/components/marketing/marketing-footer";
 import { MarketingNav } from "@/components/marketing/marketing-nav";
 import { ModuleShowcase } from "@/components/marketing/module-showcase";
@@ -50,7 +50,7 @@ export default function BelgiumPage() {
             { title: "Revenue intelligence", copy: "Decision Inbox en Market Radar beschikbaar.", status: "Beschikbaar" }
           ]}
         />
-        <LifecycleFlow
+        <ProcessFlow
           title="Belgische operatorflow"
           steps={[
             { title: "Boekbaar", copy: "Hosted booking page naast bestaande site.", status: "Beschikbaar" },

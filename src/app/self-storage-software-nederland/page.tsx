@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { FeaturePageHero } from "@/components/marketing/feature-page-hero";
-import { LifecycleFlow } from "@/components/marketing/lifecycle-flow";
+import { ProcessFlow } from "@/components/marketing/lifecycle-flow";
 import { MarketingFooter } from "@/components/marketing/marketing-footer";
 import { MarketingNav } from "@/components/marketing/marketing-nav";
 import { ModuleShowcase } from "@/components/marketing/module-showcase";
@@ -38,7 +38,7 @@ export default function NetherlandsPage() {
             { title: "Competitor tracking", copy: "Operator-selected Market Radar.", status: "Beschikbaar" }
           ]}
         />
-        <LifecycleFlow
+        <ProcessFlow
           title="Van Nederlandse website naar revenue decisions"
           steps={[
             { title: "Boekbaar", copy: "Booking link, iframe of Google Business link.", status: "Beschikbaar" },

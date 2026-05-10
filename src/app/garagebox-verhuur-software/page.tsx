@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Building2 } from "lucide-react";
 import { FeaturePageHero } from "@/components/marketing/feature-page-hero";
-import { LifecycleFlow } from "@/components/marketing/lifecycle-flow";
+import { ProcessFlow } from "@/components/marketing/lifecycle-flow";
 import { MarketingFooter } from "@/components/marketing/marketing-footer";
 import { MarketingNav } from "@/components/marketing/marketing-nav";
 import { ModuleShowcase } from "@/components/marketing/module-showcase";
@@ -41,8 +41,8 @@ export default function GarageboxPage() {
             ))}
           </div>
         </section>
-        <LifecycleFlow
-          title="Garagebox customer lifecycle"
+        <ProcessFlow
+          title="Garagebox customer journey"
           steps={[
             { title: "Online reservation", copy: "Resource kiezen en aanvraag vastleggen.", status: "Beschikbaar" },
             { title: "Customer setup", copy: "Klanttype, contact, move-in en follow-up.", status: "Pilot" },
@@ -56,7 +56,7 @@ export default function GarageboxPage() {
             { title: "Resource-first", copy: "Niet alleen units; elke box of plek kan een resource zijn.", status: "Pilot" },
             { title: "Booking page", copy: "Maak bestaande garageboxwebsite boekbaar.", status: "Beschikbaar" },
             { title: "Local payment roadmap", copy: "iDEAL/Bancontact/SEPA als toekomstige workflow.", status: "Roadmap" },
-            { title: "Access readiness", copy: "Toegangsstappen worden onderdeel van de lifecycle.", status: "Roadmap" }
+            { title: "Access readiness", copy: "Toegangsstappen worden onderdeel van de workflow.", status: "Roadmap" }
           ]}
           columns={4}
         />

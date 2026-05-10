@@ -49,7 +49,7 @@ export function MarketingFooter() {
           <p className="mt-3 max-w-sm text-sm leading-6 text-slate-600">
             Built for Benelux storage operators. Online reserveringen, onbemande workflows en revenue intelligence voor self-storage, garageboxen en containeropslag.
           </p>
-          <p className="mt-6 text-xs text-slate-500">Legal placeholder · Privacy · Terms</p>
+          <p className="mt-6 text-xs text-slate-500">© 2026 StorageYield · Privacy · Terms</p>
         </div>
         <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
           {columns.map((column) => (

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { DecisionMemoPreview } from "@/components/marketing/decision-memo-preview";
 import { FaqSection } from "@/components/marketing/faq-section";
 import { FeaturePageHero } from "@/components/marketing/feature-page-hero";
-import { LifecycleFlow } from "@/components/marketing/lifecycle-flow";
+import { ProcessFlow } from "@/components/marketing/lifecycle-flow";
 import { MarketRadarPreview } from "@/components/marketing/market-radar-preview";
 import { MarketingFooter } from "@/components/marketing/marketing-footer";
 import { MarketingNav } from "@/components/marketing/marketing-nav";
@@ -48,7 +48,7 @@ export default function PricingIntelligencePage() {
             { title: "Competitor refresh", copy: "Stale data wordt een duidelijke decision.", status: "Beschikbaar" }
           ]}
         />
-        <LifecycleFlow
+        <ProcessFlow
           title="Van signaal naar impact"
           steps={[
             { title: "Demand Matrix", copy: "Bezetting, leads en beschikbaarheid per unit type.", status: "Pilot" },

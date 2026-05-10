@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { FeaturePageHero } from "@/components/marketing/feature-page-hero";
-import { LifecycleFlow } from "@/components/marketing/lifecycle-flow";
+import { ProcessFlow } from "@/components/marketing/lifecycle-flow";
 import { MarketingFooter } from "@/components/marketing/marketing-footer";
 import { MarketingNav } from "@/components/marketing/marketing-nav";
 import { ModuleShowcase } from "@/components/marketing/module-showcase";
@@ -44,8 +44,8 @@ export default function BillingPage() {
           ]}
           columns={4}
         />
-        <LifecycleFlow
-          title="Invoice lifecycle"
+        <ProcessFlow
+          title="Invoice process"
           steps={[
             { title: "Subscription", copy: "Klant/resource contractueel vastleggen.", status: "Pilot" },
             { title: "Invoice", copy: "Btw, klanttype en structured references.", status: "Roadmap" },

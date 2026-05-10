@@ -3,7 +3,7 @@ import Link from "next/link";
 import { BookingPagePreview } from "@/components/marketing/booking-page-preview";
 import { FaqSection } from "@/components/marketing/faq-section";
 import { FeaturePageHero } from "@/components/marketing/feature-page-hero";
-import { LifecycleFlow } from "@/components/marketing/lifecycle-flow";
+import { ProcessFlow } from "@/components/marketing/lifecycle-flow";
 import { MarketingFooter } from "@/components/marketing/marketing-footer";
 import { MarketingNav } from "@/components/marketing/marketing-nav";
 import { ModuleShowcase } from "@/components/marketing/module-showcase";
@@ -43,7 +43,7 @@ export default function BookingSystemPage() {
           </div>
         </section>
 
-        <LifecycleFlow
+        <ProcessFlow
           title="Visitor naar booking opportunity"
           copy="De booking flow legt vraag vast per resource type en maakt follow-up meetbaar."
           steps={[

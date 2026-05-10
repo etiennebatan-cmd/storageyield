@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /app/
+Disallow: /api/
+Disallow: /auth/
+Disallow: /login
+Disallow: /signup
+Disallow: /logout
+Disallow: /onboarding
+Sitemap: https://storageyield.com/sitemap.xml
