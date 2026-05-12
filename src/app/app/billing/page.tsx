@@ -5,27 +5,31 @@ import { useOrganization } from '@/lib/hooks/use-organization';
 import { supabaseClient } from '@/lib/supabase/client';
 import type { Invoice, Payment } from '@/lib/types';
 
+type BillingInvoice = Invoice & { customers?: { first_name: string; last_name: string } };
+type BillingPayment = Payment & { customers?: { first_name: string; last_name: string } };
+
 export default function BillingPage() {
   const org = useOrganization();
-  const [invoices, setInvoices] = useState<any[]>([]);
-  const [payments, setPayments] = useState<any[]>([]);
+  const [invoices, setInvoices] = useState<BillingInvoice[]>([]);
+  const [payments, setPayments] = useState<BillingPayment[]>([]);
   const [activeTab, setActiveTab] = useState<'invoices' | 'payments'>('invoices');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!org?.id) return;
+    const organizationId = org?.id;
+    if (!organizationId) return;
 
     async function load() {
       const [inv, pay] = await Promise.all([
         supabaseClient
           .from('invoices')
           .select('*, customers(first_name, last_name)')
-          .eq('organization_id', org.id)
+          .eq('organization_id', organizationId)
           .order('created_at', { ascending: false }),
         supabaseClient
           .from('payments')
           .select('*, customers(first_name, last_name)')
-          .eq('organization_id', org.id)
+          .eq('organization_id', organizationId)
           .order('created_at', { ascending: false })
       ]);
       
@@ -85,7 +89,7 @@ export default function BillingPage() {
               </tr>
             </thead>
             <tbody>
-              {invoices.map((invoice: any) => (
+              {invoices.map((invoice: BillingInvoice) => (
                 <tr key={invoice.id} className="border-b hover:bg-gray-50">
                   <td className="p-2 font-mono text-xs">{invoice.invoice_number}</td>
                   <td className="p-2">
@@ -121,7 +125,7 @@ export default function BillingPage() {
               </tr>
             </thead>
             <tbody>
-              {payments.map((payment: any) => (
+              {payments.map((payment: BillingPayment) => (
                 <tr key={payment.id} className="border-b hover:bg-gray-50">
                   <td className="p-2">
                     {payment.customers?.first_name} {payment.customers?.last_name}

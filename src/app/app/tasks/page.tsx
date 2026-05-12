@@ -3,20 +3,22 @@
 import { useEffect, useState } from 'react';
 import { useOrganization } from '@/lib/hooks/use-organization';
 import { supabaseClient } from '@/lib/supabase/client';
+import type { Task } from '@/lib/types';
 
 export default function TasksPage() {
   const org = useOrganization();
-  const [tasks, setTasks] = useState<any[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!org?.id) return;
+    const organizationId = org?.id;
+    if (!organizationId) return;
 
     async function load() {
       const { data, error } = await supabaseClient
         .from('tasks')
         .select('*')
-        .eq('organization_id', org.id)
+        .eq('organization_id', organizationId)
         .order('created_at', { ascending: false });
       
       if (!error) setTasks(data || []);
@@ -64,7 +66,7 @@ export default function TasksPage() {
             </tr>
           </thead>
           <tbody>
-            {tasks.map((task: any) => (
+            {tasks.map((task: Task) => (
               <tr key={task.id} className="border-b hover:bg-gray-50">
                 <td className="p-2 font-semibold">{task.title}</td>
                 <td className="p-2 text-gray-600">{task.task_type}</td>

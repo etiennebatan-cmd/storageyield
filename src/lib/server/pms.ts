@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import type {
-  Customer, Tenancy, Contract, Invoice, Payment, AccessCredential,
+  Customer, Tenancy, Contract, Invoice, InvoiceLine, Payment, AccessCredential,
   Task, MaintenanceTicket, SupportTicket, MoveInWorkflow, MoveOutWorkflow,
-  AcquisitionTarget, DueDiligenceItem, IntegrationPlan, CapexItem
+  AcquisitionTarget
 } from '../types';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -142,7 +142,7 @@ export async function getInvoice(invoiceId: string) {
     .eq('id', invoiceId)
     .single();
   if (error) throw error;
-  return data as Invoice & { invoice_lines: any[] };
+  return data as Invoice & { invoice_lines: InvoiceLine[] };
 }
 
 export async function createInvoice(organizationId: string, invoice: Omit<Invoice, 'id' | 'organization_id' | 'created_at' | 'updated_at'>) {

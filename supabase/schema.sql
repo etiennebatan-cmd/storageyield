@@ -1335,10 +1335,13 @@ end $$;
 
 do $$
 begin
-  create type payment_status_enum as enum ('pending', 'paid', 'failed', 'refunded', 'cancelled');
+  create type payment_status_enum as enum ('pending', 'paid', 'current', 'overdue', 'failed', 'refunded', 'cancelled');
 exception
   when duplicate_object then null;
 end $$;
+
+alter type payment_status_enum add value if not exists 'current';
+alter type payment_status_enum add value if not exists 'overdue';
 
 do $$
 begin
@@ -1489,8 +1492,8 @@ create table if not exists tenancies (
   monthly_rent numeric not null,
   deposit_amount numeric,
   billing_day integer check (billing_day between 1 and 31),
-  contract_id uuid references contracts(id),
-  billing_schedule_id uuid references billing_schedules(id),
+  contract_id uuid,
+  billing_schedule_id uuid,
   access_status access_status_enum default 'pending',
   payment_status payment_status_enum default 'pending',
   created_at timestamptz not null default now(),
@@ -1533,6 +1536,19 @@ create table if not exists contracts (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'tenancies_contract_id_fkey'
+  ) then
+    alter table tenancies
+      add constraint tenancies_contract_id_fkey foreign key (contract_id) references contracts(id);
+  end if;
+exception
+  when duplicate_object then null;
+end $$;
 
 create table if not exists invoices (
   id uuid primary key default gen_random_uuid(),
@@ -1613,6 +1629,19 @@ create table if not exists billing_schedules (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'tenancies_billing_schedule_id_fkey'
+  ) then
+    alter table tenancies
+      add constraint tenancies_billing_schedule_id_fkey foreign key (billing_schedule_id) references billing_schedules(id);
+  end if;
+exception
+  when duplicate_object then null;
+end $$;
 
 create table if not exists access_credentials (
   id uuid primary key default gen_random_uuid(),

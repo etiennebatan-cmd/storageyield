@@ -56,6 +56,14 @@ Production mode requires:
 - `SUPABASE_SERVICE_ROLE_KEY` for seed/simulation scripts
 - `RESEND_API_KEY` optional
 
+Seed the StorageYield PMS demo data with:
+
+```bash
+npm run seed:pms
+```
+
+**Note:** Requires `.env.local` with valid Supabase credentials. The script will fail with clear instructions if missing.
+
 By default `/app/*` uses production mode and loads Supabase-backed state. It does not silently fall back to demo data.
 
 ## Supabase Setup

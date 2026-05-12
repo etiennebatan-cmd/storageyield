@@ -11,13 +11,14 @@ export default function CustomersPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!org?.id) return;
+    const organizationId = org?.id;
+    if (!organizationId) return;
 
     async function load() {
       const { data, error } = await supabaseClient
         .from('customers')
         .select('*')
-        .eq('organization_id', org.id)
+        .eq('organization_id', organizationId)
         .order('created_at', { ascending: false });
       
       if (!error) setCustomers(data || []);

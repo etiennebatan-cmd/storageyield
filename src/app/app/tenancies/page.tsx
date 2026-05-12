@@ -7,7 +7,7 @@ import type { Tenancy, Customer, Unit } from '@/lib/types';
 
 interface TenancyWithDetails extends Tenancy {
   customer?: Customer;
-  unit?: Unit;
+  unit?: Unit & { unit_code?: string };
 }
 
 export default function TenanciesPage() {
@@ -16,13 +16,14 @@ export default function TenanciesPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!org?.id) return;
+    const organizationId = org?.id;
+    if (!organizationId) return;
 
     async function load() {
       const { data, error } = await supabaseClient
         .from('tenancies')
         .select('*, customers(*), units(*)')
-        .eq('organization_id', org.id)
+        .eq('organization_id', organizationId)
         .order('created_at', { ascending: false });
       
       if (!error) setTenancies(data || []);
@@ -63,12 +64,12 @@ export default function TenanciesPage() {
             </tr>
           </thead>
           <tbody>
-            {tenancies.map((tenancy: any) => (
+            {tenancies.map((tenancy: TenancyWithDetails) => (
               <tr key={tenancy.id} className="border-b hover:bg-gray-50">
                 <td className="p-2 font-semibold">
-                  {tenancy.customers?.first_name} {tenancy.customers?.last_name}
+                  {tenancy.customer?.first_name} {tenancy.customer?.last_name}
                 </td>
-                <td className="p-2 text-gray-600">{tenancy.units?.unit_code}</td>
+                <td className="p-2 text-gray-600">{tenancy.unit?.unit_code}</td>
                 <td className="p-2">€{tenancy.monthly_rent}</td>
                 <td className="p-2">
                   <span className={`px-2 py-1 rounded text-xs font-semibold ${statusColor(tenancy.status)}`}>

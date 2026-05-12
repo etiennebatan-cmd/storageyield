@@ -12,7 +12,7 @@ export type RiskStatus = "normal" | "watch" | "blocked";
 export type TenancyStatus = "reserved" | "pending_move_in" | "active" | "notice_given" | "moved_out" | "cancelled" | "defaulted";
 export type ContractStatus = "draft" | "sent" | "accepted" | "signed" | "active" | "terminated" | "expired";
 export type InvoiceStatus = "draft" | "issued" | "paid" | "overdue" | "cancelled" | "credited";
-export type PaymentStatus = "pending" | "paid" | "failed" | "refunded" | "cancelled";
+export type PaymentStatus = "pending" | "paid" | "current" | "overdue" | "failed" | "refunded" | "cancelled";
 export type PaymentMethodType = "cash" | "bank_transfer" | "card" | "ideal" | "bancontact" | "sepa" | "manual" | "future";
 export type PaymentProvider = "manual" | "mollie" | "stripe" | "bank_transfer" | "future";
 export type CredentialType = "manual_code" | "pin" | "qr" | "badge" | "mobile" | "future_integration";
@@ -200,7 +200,7 @@ export interface Contract {
   terminated_at: string | null;
   pdf_url: string | null;
   ip_address: string | null;
-  audit_snapshot: Record<string, any> | null;
+  audit_snapshot: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
 }

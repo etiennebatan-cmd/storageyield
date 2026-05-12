@@ -11,15 +11,14 @@ interface Organization {
 
 export function useOrganization() {
   const [org, setOrg] = useState<Organization | null>(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadOrg() {
       try {
-        const { data: session } = await supabaseClient.auth.getSession();
-        
+        const { data } = await supabaseClient.auth.getSession();
+        const session = data?.session;
+
         if (!session?.user?.id) {
-          setLoading(false);
           return;
         }
 
@@ -42,8 +41,6 @@ export function useOrganization() {
         }
       } catch (error) {
         console.error('Failed to load organization:', error);
-      } finally {
-        setLoading(false);
       }
     }
 

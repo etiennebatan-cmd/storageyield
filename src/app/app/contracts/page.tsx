@@ -5,19 +5,25 @@ import { useOrganization } from '@/lib/hooks/use-organization';
 import { supabaseClient } from '@/lib/supabase/client';
 import type { Contract } from '@/lib/types';
 
+type ContractWithRelations = Contract & {
+  customers?: Array<{ first_name: string; last_name: string }>;
+  tenancies?: Array<{ monthly_rent: number }>;
+};
+
 export default function ContractsPage() {
   const org = useOrganization();
-  const [contracts, setContracts] = useState<any[]>([]);
+  const [contracts, setContracts] = useState<ContractWithRelations[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!org?.id) return;
+    const organizationId = org?.id;
+    if (!organizationId) return;
 
     async function load() {
       const { data, error } = await supabaseClient
         .from('contracts')
         .select('*, customers(first_name, last_name), tenancies(monthly_rent)')
-        .eq('organization_id', org.id)
+        .eq('organization_id', organizationId)
         .order('created_at', { ascending: false });
       
       if (!error) setContracts(data || []);
@@ -57,11 +63,11 @@ export default function ContractsPage() {
             </tr>
           </thead>
           <tbody>
-            {contracts.map((contract: any) => (
+            {contracts.map((contract: ContractWithRelations) => (
               <tr key={contract.id} className="border-b hover:bg-gray-50">
                 <td className="p-2 font-mono text-xs">{contract.contract_number}</td>
                 <td className="p-2">
-                  {contract.customers?.first_name} {contract.customers?.last_name}
+                  {contract.customers?.[0]?.first_name} {contract.customers?.[0]?.last_name}
                 </td>
                 <td className="p-2">
                   <span className={`px-2 py-1 rounded text-xs font-semibold ${statusColor(contract.status)}`}>

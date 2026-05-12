@@ -20,7 +20,8 @@ export default function ControlRoomPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!org?.id) return;
+    const organizationId = org?.id;
+    if (!organizationId) return;
 
     async function loadStats() {
       const today = new Date().toISOString().split('T')[0];
@@ -31,50 +32,45 @@ export default function ControlRoomPage() {
         contracts,
         invoices,
         tasks,
-        units,
-        facilities
+        units
       ] = await Promise.all([
         supabaseClient
           .from('tenancies')
           .select('*')
-          .eq('organization_id', org.id),
+          .eq('organization_id', organizationId),
         supabaseClient
           .from('booking_requests')
           .select('*')
-          .eq('organization_id', org.id)
+          .eq('organization_id', organizationId)
           .eq('status', 'requested'),
         supabaseClient
           .from('contracts')
           .select('*')
-          .eq('organization_id', org.id)
+          .eq('organization_id', organizationId)
           .in('status', ['draft', 'sent', 'accepted']),
         supabaseClient
           .from('invoices')
           .select('total, status')
-          .eq('organization_id', org.id),
+          .eq('organization_id', organizationId),
         supabaseClient
           .from('tasks')
           .select('*')
-          .eq('organization_id', org.id)
+          .eq('organization_id', organizationId)
           .eq('status', 'open')
           .lt('due_date', today),
         supabaseClient
           .from('units')
           .select('*')
-          .eq('organization_id', org.id),
-        supabaseClient
-          .from('facilities')
-          .select('*')
-          .eq('organization_id', org.id)
+          .eq('organization_id', organizationId)
       ]);
 
-      const moveIns = tenancies.data?.filter((t: any) => t.move_in_date === today).length || 0;
-      const moveOuts = tenancies.data?.filter((t: any) => t.move_out_date === today).length || 0;
-      const active = tenancies.data?.filter((t: any) => t.status === 'active').length || 0;
-      const unpaid = tenancies.data?.filter((t: any) => t.payment_status === 'overdue').length || 0;
+      const moveIns = tenancies.data?.filter((t: { move_in_date: string | null }) => t.move_in_date === today).length || 0;
+      const moveOuts = tenancies.data?.filter((t: { move_out_date: string | null }) => t.move_out_date === today).length || 0;
+      const active = tenancies.data?.filter((t: { status: string }) => t.status === 'active').length || 0;
+      const unpaid = tenancies.data?.filter((t: { payment_status: string }) => t.payment_status === 'overdue').length || 0;
       const totalUnits = units.data?.length || 1;
-      const totalRevenue = invoices.data?.reduce((sum: number, inv: any) => sum + (inv.total || 0), 0) || 0;
-      const outstandingByStatus = invoices.data?.filter((inv: any) => inv.status === 'overdue').length || 0;
+      const totalRevenue = invoices.data?.reduce((sum: number, inv: { total?: number }) => sum + (inv.total || 0), 0) || 0;
+      const outstandingByStatus = invoices.data?.filter((inv: { status?: string }) => inv.status === 'overdue').length || 0;
 
       setStats({
         todayMoveIns: moveIns,
@@ -96,7 +92,7 @@ export default function ControlRoomPage() {
 
   if (loading) return <div className="p-6">Loading control room...</div>;
 
-  const StatCard = ({ label, value, color, icon }: any) => (
+  const StatCard = ({ label, value, color, icon }: { label: string; value: number; color: string; icon: string }) => (
     <div className={`p-4 rounded border-2 ${color}`}>
       <div className="text-sm font-semibold text-gray-600">{label}</div>
       <div className="text-3xl font-bold mt-2">{icon} {value}</div>
@@ -112,7 +108,7 @@ export default function ControlRoomPage() {
 
       {/* Today's Operations */}
       <div className="bg-blue-50 border rounded-lg p-4">
-        <h2 className="font-bold text-lg mb-3">📅 Today's Operations</h2>
+        <h2 className="font-bold text-lg mb-3">📅 Today&apos;s Operations</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <StatCard label="Move-Ins" value={stats.todayMoveIns} color="border-green-300" icon="✅" />
           <StatCard label="Move-Outs" value={stats.todayMoveOuts} color="border-orange-300" icon="👋" />

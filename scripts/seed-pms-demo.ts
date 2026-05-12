@@ -1,7 +1,16 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+function requiredEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    console.error(`Missing required environment variable: ${name}. Copy .env.example to .env.local and fill it in.`);
+    process.exit(1);
+  }
+  return value;
+}
+
+const supabaseUrl = requiredEnv('NEXT_PUBLIC_SUPABASE_URL');
+const supabaseKey = requiredEnv('SUPABASE_SERVICE_ROLE_KEY');
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -60,7 +69,7 @@ async function seedDemoData() {
 
     console.log(`✅ Using ${facilities.length} facilities`);
 
-    // Create customers
+// Create or lookup customers
     console.log('👥 Creating customers...');
     const customerEmails = [
       'alice@example.com', 'bob@example.com', 'carlos@example.com',
@@ -69,30 +78,57 @@ async function seedDemoData() {
       'jack@example.com', 'kate@example.com', 'liam@example.com'
     ];
 
-    const customers = await Promise.all(
-      customerEmails.map((email, i) => 
-        supabase
+    const names = [
+      'Alice', 'Bob', 'Carlos', 'Diana', 'Emma', 'Frank',
+      'Grace', 'Henry', 'Isabella', 'Jack', 'Kate', 'Liam'
+    ];
+
+    const surnames = [
+      'Smith', 'Jones', 'Garcia', 'Williams', 'Brown', 'Miller',
+      'Davis', 'Rodriguez', 'Martinez', 'Hernandez', 'Lopez', 'Gonzalez'
+    ];
+
+    const customerIds = await Promise.all(
+      customerEmails.map(async (email, i) => {
+        const { data: existingCustomer, error: lookupError } = await supabase
+          .from('customers')
+          .select('id')
+          .eq('email', email)
+          .single();
+
+        if (lookupError && lookupError.code !== 'PGRST116') {
+          throw lookupError;
+        }
+
+        if (existingCustomer?.id) {
+          return existingCustomer.id;
+        }
+
+        const { data: customer, error: customerError } = await supabase
           .from('customers')
           .insert([{
             organization_id: organizationId,
             customer_type: i % 3 === 0 ? 'business' : 'individual',
-            first_name: ['Alice', 'Bob', 'Carlos', 'Diana', 'Emma', 'Frank', 'Grace', 'Henry', 'Isabella', 'Jack', 'Kate', 'Liam'][i],
-            last_name: ['Smith', 'Jones', 'Garcia', 'Williams', 'Brown', 'Miller', 'Davis', 'Rodriguez', 'Martinez', 'Hernandez', 'Lopez', 'Gonzalez'][i],
-            company_name: i % 3 === 0 ? `Company ${i+1}` : null,
+            first_name: names[i],
+            last_name: surnames[i],
+            company_name: i % 3 === 0 ? `Company ${i + 1}` : null,
             email,
             phone: `+32 4${String(i).padStart(2, '0')}1234567`,
             preferred_language: 'nl',
-            billing_address: `Street ${i+1}, City`,
+            billing_address: `Street ${i + 1}, City`,
             id_status: 'verified',
             risk_status: i === 8 ? 'watch' : 'normal'
           }])
           .select('id')
-          .single()
-      )
+          .single();
+
+        if (customerError) throw customerError;
+        if (!customer?.id) throw new Error(`Failed to create customer: ${email}`);
+        return customer.id;
+      })
     );
 
-    const customerIds = customers.map(c => (c.data as any).id);
-    console.log(`✅ Created ${customerIds.length} customers`);
+    console.log(`✅ Prepared ${customerIds.length} customers`);
 
     // Get units
     const { data: units, error: unitError } = await supabase
@@ -128,7 +164,7 @@ async function seedDemoData() {
           deposit_amount: 500,
           billing_day: 1,
           access_status: 'active',
-          payment_status: i === 5 || i === 6 ? 'overdue' : 'current'
+          payment_status: 'pending'
         }])
         .select('id')
         .single();
@@ -204,41 +240,65 @@ async function seedDemoData() {
       const isOverdue = i >= 4;
       const subtotal = 250;
       const vat = subtotal * 0.21;
-      
-      const { data: invoice, error } = await supabase
+      const invoiceNumber = `INV-${String(i + 1).padStart(4, '0')}`;
+
+      const { data: existingInvoice, error: existingError } = await supabase
         .from('invoices')
-        .insert([{
-          organization_id: organizationId,
-          facility_id: facility1Id,
-          customer_id: customerIds[i],
-          tenancy_id: tenancies[i],
-          invoice_number: `INV-${String(i+1).padStart(4, '0')}`,
-          invoice_date: invoiceDate.toISOString().split('T')[0],
-          due_date: dueDate.toISOString().split('T')[0],
-          status: isOverdue ? 'overdue' : i === 0 ? 'paid' : 'issued',
-          subtotal,
-          vat_amount: vat,
-          total: subtotal + vat,
-          outstanding_amount: isOverdue ? subtotal + vat : 0,
-          currency: 'EUR'
-        }])
         .select('id')
-        .single();
+        .eq('invoice_number', invoiceNumber)
+        .maybeSingle();
+
+      if (existingError) throw existingError;
+
+      let invoiceId: string;
+      if (existingInvoice?.id) {
+        invoiceId = existingInvoice.id;
+      } else {
+        const { data: invoice, error } = await supabase
+          .from('invoices')
+          .insert([{
+            organization_id: organizationId,
+            facility_id: facility1Id,
+            customer_id: customerIds[i],
+            tenancy_id: tenancies[i],
+            invoice_number: invoiceNumber,
+            invoice_date: invoiceDate.toISOString().split('T')[0],
+            due_date: dueDate.toISOString().split('T')[0],
+            status: isOverdue ? 'overdue' : i === 0 ? 'paid' : 'issued',
+            subtotal,
+            vat_amount: vat,
+            total: subtotal + vat,
+            outstanding_amount: isOverdue ? subtotal + vat : 0,
+            currency: 'EUR'
+          }])
+          .select('id')
+          .single();
+
+        if (error) throw error;
+        invoiceId = (invoice as any).id;
+      }
       
-      if (error) throw error;
-      
-      // Add invoice line
-      await supabase
+      const { data: lines, error: linesError } = await supabase
         .from('invoice_lines')
-        .insert([{
-          invoice_id: (invoice as any).id,
-          description: 'Monthly Storage Rent',
-          quantity: 1,
-          unit_price: subtotal,
-          vat_rate: 21,
-          line_total: subtotal,
-          line_type: 'rent'
-        }]);
+        .select('id')
+        .eq('invoice_id', invoiceId)
+        .maybeSingle();
+
+      if (linesError) throw linesError;
+
+      if (!lines?.id) {
+        await supabase
+          .from('invoice_lines')
+          .insert([{
+            invoice_id: invoiceId,
+            description: 'Monthly Storage Rent',
+            quantity: 1,
+            unit_price: subtotal,
+            vat_rate: 21,
+            line_total: subtotal,
+            line_type: 'rent'
+          }]);
+      }
     }
     console.log('✅ Created 6 invoices');
 
@@ -411,11 +471,11 @@ async function seedDemoData() {
           country: target.country,
           region: target.region,
           asset_type: target.asset_type,
-          estimated_units: 50 + Math.random() * 100,
-          estimated_revenue: 50000 + Math.random() * 100000,
+          estimated_units: Math.round(50 + Math.random() * 100),
+          estimated_revenue: Math.round(50000 + Math.random() * 100000),
           acquisition_status: target.status,
-          digital_weakness_score: Math.random() * 100,
-          automation_readiness_score: Math.random() * 100
+          digital_weakness_score: Math.round(Math.random() * 100),
+          automation_readiness_score: Math.round(Math.random() * 100)
         }])
         .select('id')
         .single();

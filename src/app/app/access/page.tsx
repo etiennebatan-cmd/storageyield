@@ -3,28 +3,33 @@
 import { useEffect, useState } from 'react';
 import { useOrganization } from '@/lib/hooks/use-organization';
 import { supabaseClient } from '@/lib/supabase/client';
+import type { AccessCredential, AccessEvent } from '@/lib/types';
+
+type AccessWithCustomer = AccessCredential & { customers?: { first_name: string; last_name: string } };
+type AccessEventWithCustomer = AccessEvent & { customers?: { first_name: string; last_name: string } };
 
 export default function AccessPage() {
   const org = useOrganization();
-  const [credentials, setCredentials] = useState<any[]>([]);
-  const [events, setEvents] = useState<any[]>([]);
+  const [credentials, setCredentials] = useState<AccessWithCustomer[]>([]);
+  const [events, setEvents] = useState<AccessEventWithCustomer[]>([]);
   const [activeTab, setActiveTab] = useState<'credentials' | 'events'>('credentials');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!org?.id) return;
+    const organizationId = org?.id;
+    if (!organizationId) return;
 
     async function load() {
       const [cred, evt] = await Promise.all([
         supabaseClient
           .from('access_credentials')
           .select('*, customers(first_name, last_name)')
-          .eq('organization_id', org.id)
+          .eq('organization_id', organizationId)
           .order('created_at', { ascending: false }),
         supabaseClient
           .from('access_events')
           .select('*, customers(first_name, last_name)')
-          .eq('organization_id', org.id)
+          .eq('organization_id', organizationId)
           .order('event_time', { ascending: false })
           .limit(20)
       ]);
@@ -83,7 +88,7 @@ export default function AccessPage() {
               </tr>
             </thead>
             <tbody>
-              {credentials.map((cred: any) => (
+              {credentials.map((cred: AccessWithCustomer) => (
                 <tr key={cred.id} className="border-b hover:bg-gray-50">
                   <td className="p-2">
                     {cred.customers?.first_name} {cred.customers?.last_name}
@@ -116,7 +121,7 @@ export default function AccessPage() {
               </tr>
             </thead>
             <tbody>
-              {events.map((event: any) => (
+              {events.map((event: AccessEventWithCustomer) => (
                 <tr key={event.id} className="border-b hover:bg-gray-50">
                   <td className="p-2">
                     {event.customers?.first_name} {event.customers?.last_name}

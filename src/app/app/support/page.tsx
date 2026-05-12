@@ -3,20 +3,24 @@
 import { useEffect, useState } from 'react';
 import { useOrganization } from '@/lib/hooks/use-organization';
 import { supabaseClient } from '@/lib/supabase/client';
+import type { SupportTicket } from '@/lib/types';
+
+type SupportTicketWithCustomer = SupportTicket & { customers?: { first_name: string; last_name: string } };
 
 export default function SupportPage() {
   const org = useOrganization();
-  const [tickets, setTickets] = useState<any[]>([]);
+  const [tickets, setTickets] = useState<SupportTicketWithCustomer[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!org?.id) return;
+    const organizationId = org?.id;
+    if (!organizationId) return;
 
     async function load() {
       const { data, error } = await supabaseClient
         .from('support_tickets')
         .select('*, customers(first_name, last_name)')
-        .eq('organization_id', org.id)
+        .eq('organization_id', organizationId)
         .order('created_at', { ascending: false });
       
       if (!error) setTickets(data || []);
@@ -44,7 +48,7 @@ export default function SupportPage() {
       <h1 className="text-2xl font-bold mb-4">Support Tickets</h1>
       
       <div className="grid gap-3">
-        {tickets.map((ticket: any) => (
+        {tickets.map((ticket: SupportTicketWithCustomer) => (
           <div key={ticket.id} className="p-4 border rounded hover:bg-gray-50">
             <div className="flex justify-between items-start">
               <div>
