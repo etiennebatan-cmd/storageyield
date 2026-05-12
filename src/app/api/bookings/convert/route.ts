@@ -19,7 +19,7 @@ export async function POST(request: Request) {
 
   const { data: booking, error: bookingError } = await supabase
     .from("booking_requests")
-    .select("id,organization_id,facility_id,unit_type_id,customer_name,customer_type,quoted_monthly_rate")
+    .select("id,organization_id,facility_id,unit_type_id,customer_name,customer_type,quoted_monthly_rate,email,phone")
     .eq("id", parsed.data.booking_id)
     .in("organization_id", organizationIds)
     .single();
@@ -39,6 +39,180 @@ export async function POST(request: Request) {
   const tenantType = parsed.data.tenant_type ?? booking.customer_type ?? "unknown";
   const today = new Date().toISOString().slice(0, 10);
 
+  // Create or find customer
+  let customerId: string;
+  const { data: existingCustomer } = await supabase
+    .from("customers")
+    .select("id")
+    .eq("email", booking.email)
+    .eq("organization_id", booking.organization_id)
+    .single();
+  if (existingCustomer) {
+    customerId = existingCustomer.id;
+  } else {
+    const { data: newCustomer, error: customerError } = await supabase
+      .from("customers")
+      .insert({
+        organization_id: booking.organization_id,
+        customer_type: tenantType === "business" ? "business" : "individual",
+        first_name: booking.customer_name.split(" ")[0] || "Unknown",
+        last_name: booking.customer_name.split(" ").slice(1).join(" ") || "Unknown",
+        email: booking.email,
+        phone: booking.phone,
+        preferred_language: "nl",
+        billing_address: "To be updated",
+        id_status: "pending",
+        risk_status: "normal"
+      })
+      .select("id")
+      .single();
+    if (customerError) return NextResponse.json({ error: customerError.message }, { status: 500 });
+    customerId = newCustomer.id;
+  }
+
+  // Create tenancy
+  const { data: tenancy, error: tenancyError } = await supabase
+    .from("tenancies")
+    .insert({
+      organization_id: booking.organization_id,
+      facility_id: booking.facility_id,
+      customer_id: customerId,
+      resource_id: parsed.data.unit_id,
+      status: "pending_move_in",
+      start_date: today,
+      move_in_date: today,
+      monthly_rent: rent,
+      deposit_amount: 500,
+      billing_day: 1,
+      access_status: "pending",
+      payment_status: "pending"
+    })
+    .select("id")
+    .single();
+  if (tenancyError) return NextResponse.json({ error: tenancyError.message }, { status: 500 });
+
+  // Create draft contract
+  const { data: contract, error: contractError } = await supabase
+    .from("contracts")
+    .insert({
+      organization_id: booking.organization_id,
+      facility_id: booking.facility_id,
+      customer_id: customerId,
+      tenancy_id: tenancy.id,
+      language: "nl",
+      jurisdiction: "Belgium",
+      status: "draft",
+      contract_number: `CONTRACT-${booking.id.slice(0, 8).toUpperCase()}`,
+      start_date: today
+    })
+    .select("id")
+    .single();
+  if (contractError) return NextResponse.json({ error: contractError.message }, { status: 500 });
+
+  // Create billing schedule
+  const { error: billingError } = await supabase
+    .from("billing_schedules")
+    .insert({
+      organization_id: booking.organization_id,
+      tenancy_id: tenancy.id,
+      billing_cycle: "monthly",
+      billing_day: 1,
+      next_billing_date: today,
+      status: "active"
+    });
+  if (billingError) return NextResponse.json({ error: billingError.message }, { status: 500 });
+
+  // Create first invoice
+  const dueDate = new Date();
+  dueDate.setDate(dueDate.getDate() + 30);
+  const { data: invoice, error: invoiceError } = await supabase
+    .from("invoices")
+    .insert({
+      organization_id: booking.organization_id,
+      facility_id: booking.facility_id,
+      customer_id: customerId,
+      tenancy_id: tenancy.id,
+      invoice_number: `INV-${booking.id.slice(0, 8).toUpperCase()}-001`,
+      invoice_date: today,
+      due_date: dueDate.toISOString().slice(0, 10),
+      status: "issued",
+      subtotal: rent,
+      vat_amount: rent * 0.21,
+      total: rent * 1.21,
+      outstanding_amount: rent * 1.21,
+      currency: "EUR"
+    })
+    .select("id")
+    .single();
+  if (invoiceError) return NextResponse.json({ error: invoiceError.message }, { status: 500 });
+
+  // Create invoice lines
+  const { error: lineError } = await supabase
+    .from("invoice_lines")
+    .insert({
+      invoice_id: invoice.id,
+      description: "Monthly Storage Rent",
+      quantity: 1,
+      unit_price: rent,
+      vat_rate: 21,
+      line_total: rent,
+      line_type: "rent"
+    });
+  if (lineError) return NextResponse.json({ error: lineError.message }, { status: 500 });
+
+  // Create move-in workflow
+  const { error: workflowError } = await supabase
+    .from("move_in_workflows")
+    .insert({
+      organization_id: booking.organization_id,
+      tenancy_id: tenancy.id,
+      contract_accepted: false,
+      first_invoice_paid: false,
+      deposit_paid: false,
+      access_created: false,
+      move_in_instructions_sent: false,
+      unit_ready: false
+    });
+  if (workflowError) return NextResponse.json({ error: workflowError.message }, { status: 500 });
+
+  // Create pending manual access credential
+  const { error: accessError } = await supabase
+    .from("access_credentials")
+    .insert({
+      organization_id: booking.organization_id,
+      tenancy_id: tenancy.id,
+      credential_type: "manual",
+      status: "pending",
+      access_level: "full",
+      valid_from: today,
+      valid_until: null
+    });
+  if (accessError) return NextResponse.json({ error: accessError.message }, { status: 500 });
+
+  // Create tasks for missing items
+  const tasks = [
+    { title: "Accept contract", description: "Customer needs to accept the draft contract", type: "contract" },
+    { title: "Pay first invoice", description: "Customer needs to pay the first invoice", type: "billing" },
+    { title: "Pay deposit", description: "Customer needs to pay the deposit", type: "billing" },
+    { title: "Create access credential", description: "Create manual access credential for customer", type: "access" },
+    { title: "Send move-in instructions", description: "Send move-in instructions to customer", type: "move_in" },
+    { title: "Prepare unit", description: "Ensure unit is ready for move-in", type: "maintenance" }
+  ];
+  for (const task of tasks) {
+    await supabase
+      .from("tasks")
+      .insert({
+        organization_id: booking.organization_id,
+        tenancy_id: tenancy.id,
+        title: task.title,
+        description: task.description,
+        type: task.type,
+        status: "pending",
+        priority: "high"
+      });
+  }
+
+  // Update unit
   const { error: unitUpdateError } = await supabase
     .from("units")
     .update({
@@ -50,6 +224,7 @@ export async function POST(request: Request) {
     .eq("id", parsed.data.unit_id);
   if (unitUpdateError) return NextResponse.json({ error: unitUpdateError.message }, { status: 500 });
 
+  // Update booking
   const { data: updatedBooking, error: bookingUpdateError } = await supabase
     .from("booking_requests")
     .update({
@@ -69,8 +244,8 @@ export async function POST(request: Request) {
     entity_type: "booking_request",
     entity_id: booking.id,
     event_type: "booking_converted",
-    payload: { selected_unit_id: parsed.data.unit_id, rent, tenant_type: tenantType }
+    payload: { selected_unit_id: parsed.data.unit_id, rent, tenant_type: tenantType, customer_id: customerId, tenancy_id: tenancy.id }
   });
 
-  return NextResponse.json({ ok: true, booking: updatedBooking });
+  return NextResponse.json({ ok: true, booking: updatedBooking, customer_id: customerId, tenancy_id: tenancy.id });
 }

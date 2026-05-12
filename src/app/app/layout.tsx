@@ -15,14 +15,22 @@ export const metadata: Metadata = {
 };
 
 const links = [
-  ["/app/decisions", "Decision Inbox"],
-  ["/app/control-room", "Revenue Control Room"],
+  ["/app/control-room", "Control Room"],
+  ["/app/facilities", "Facilities"],
+  ["/app/units-pricing", "Resources"],
+  ["/app/customers", "Customers"],
+  ["/app/tenancies", "Tenancies"],
+  ["/app/bookings", "Bookings"],
+  ["/app/contracts", "Contracts"],
+  ["/app/billing", "Billing"],
+  ["/app/access", "Access"],
+  ["/app/tasks", "Tasks"],
+  ["/app/maintenance", "Maintenance"],
+  ["/app/support", "Support"],
+  ["/app/decisions", "Revenue Intelligence"],
   ["/app/market-radar", "Market Radar"],
-  ["/app/pricing-lab", "Pricing Lab"],
-  ["/app/campaigns", "Campaign Playbooks"],
-  ["/app/booking-conversion", "Booking Conversion"],
-  ["/app/impact-report", "Impact Report"],
-  ["/app/data-integrations", "Data & Integrations"]
+  ["/app/reports", "Reports"],
+  ["/app/acquisition", "Acquisition"]
 ];
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {

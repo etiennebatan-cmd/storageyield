@@ -1343,6 +1343,8 @@ end $$;
 alter type payment_status_enum add value if not exists 'current';
 alter type payment_status_enum add value if not exists 'overdue';
 
+alter table payment_methods alter column status type payment_method_status_enum using status::text::payment_method_status_enum;
+
 do $$
 begin
   create type payment_method_enum as enum ('cash', 'bank_transfer', 'card', 'ideal', 'bancontact', 'sepa', 'manual', 'future');
@@ -1374,6 +1376,13 @@ end $$;
 do $$
 begin
   create type task_type_enum as enum ('booking_followup', 'contract', 'billing', 'access', 'maintenance', 'move_in', 'move_out', 'support', 'revenue', 'compliance', 'other');
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create type payment_method_status_enum as enum ('pending', 'active', 'expired', 'failed', 'revoked');
 exception
   when duplicate_object then null;
 end $$;
@@ -1948,8 +1957,17 @@ using (is_org_member(organization_id))
 with check (is_org_member(organization_id));
 
 create policy "invoice lines org access" on invoice_lines
-for select
+for all
 using (
+  exists (
+    select 1
+    from invoices i
+    join organizations o on o.id = i.organization_id
+    where i.id = invoice_id
+      and is_org_member(o.id)
+  )
+)
+with check (
   exists (
     select 1
     from invoices i
@@ -2020,9 +2038,19 @@ using (is_org_member(organization_id))
 with check (is_org_member(organization_id));
 
 create policy "due diligence org access" on due_diligence_items
-for select
+for all
 using (
-  exists (
+  acquisition_target_id is null
+  or exists (
+    select 1
+    from acquisition_targets at
+    where at.id = acquisition_target_id
+      and is_org_member(at.organization_id)
+  )
+)
+with check (
+  acquisition_target_id is null
+  or exists (
     select 1
     from acquisition_targets at
     where at.id = acquisition_target_id
@@ -2031,8 +2059,17 @@ using (
 );
 
 create policy "integration plans org access" on integration_plans
-for select
+for all
 using (
+  acquisition_target_id is null
+  or exists (
+    select 1
+    from acquisition_targets at
+    where at.id = acquisition_target_id
+      and is_org_member(at.organization_id)
+  )
+)
+with check (
   acquisition_target_id is null
   or exists (
     select 1
@@ -2043,8 +2080,17 @@ using (
 );
 
 create policy "capex items org access" on capex_items
-for select
+for all
 using (
+  acquisition_target_id is null
+  or exists (
+    select 1
+    from acquisition_targets at
+    where at.id = acquisition_target_id
+      and is_org_member(at.organization_id)
+  )
+)
+with check (
   acquisition_target_id is null
   or exists (
     select 1
@@ -2055,8 +2101,17 @@ using (
 );
 
 create policy "automation scores org access" on automation_readiness_scores
-for select
+for all
 using (
+  acquisition_target_id is null
+  or exists (
+    select 1
+    from acquisition_targets at
+    where at.id = acquisition_target_id
+      and is_org_member(at.organization_id)
+  )
+)
+with check (
   acquisition_target_id is null
   or exists (
     select 1
