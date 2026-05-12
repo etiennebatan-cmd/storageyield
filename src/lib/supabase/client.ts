@@ -14,3 +14,5 @@ export const supabaseBrowser = () => {
   }
   return createBrowserClient(url, anonKey);
 };
+
+export const supabaseClient = supabaseBrowser();

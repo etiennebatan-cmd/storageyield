@@ -1289,3 +1289,750 @@ create policy "org members weekly reports" on weekly_reports
 for all
 using (is_org_member(organization_id))
 with check (is_org_member(organization_id));
+
+-- ========== PMS DOMAIN ENUMS ==========
+do $$
+begin
+  create type customer_type_enum as enum ('individual', 'business');
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create type id_status_enum as enum ('not_required', 'pending', 'verified', 'failed', 'manual_review');
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create type risk_status_enum as enum ('normal', 'watch', 'blocked');
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create type tenancy_status_enum as enum ('reserved', 'pending_move_in', 'active', 'notice_given', 'moved_out', 'cancelled', 'defaulted');
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create type contract_status_enum as enum ('draft', 'sent', 'accepted', 'signed', 'active', 'terminated', 'expired');
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create type invoice_status_enum as enum ('draft', 'issued', 'paid', 'overdue', 'cancelled', 'credited');
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create type payment_status_enum as enum ('pending', 'paid', 'failed', 'refunded', 'cancelled');
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create type payment_method_enum as enum ('cash', 'bank_transfer', 'card', 'ideal', 'bancontact', 'sepa', 'manual', 'future');
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create type payment_provider_enum as enum ('manual', 'mollie', 'stripe', 'bank_transfer', 'future');
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create type credential_type_enum as enum ('manual_code', 'pin', 'qr', 'badge', 'mobile', 'future_integration');
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create type access_status_enum as enum ('pending', 'active', 'suspended', 'revoked', 'expired', 'manual');
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create type task_type_enum as enum ('booking_followup', 'contract', 'billing', 'access', 'maintenance', 'move_in', 'move_out', 'support', 'revenue', 'compliance', 'other');
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create type task_priority_enum as enum ('low', 'medium', 'high', 'urgent');
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create type task_status_enum as enum ('open', 'in_progress', 'done', 'dismissed');
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create type maintenance_category_enum as enum ('cleaning', 'damage', 'access', 'security', 'lighting', 'pest', 'safety', 'other');
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create type support_category_enum as enum ('booking', 'payment', 'access', 'contract', 'move_out', 'complaint', 'other');
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create type move_workflow_status_enum as enum ('not_started', 'in_progress', 'ready', 'completed', 'blocked');
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create type asset_type_enum as enum ('self_storage', 'garagebox', 'container', 'caravan_boat', 'archive', 'hybrid');
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create type acquisition_status_enum as enum ('longlist', 'contacted', 'meeting', 'nda', 'reviewing', 'loi', 'rejected', 'closed');
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create type dd_category_enum as enum ('financial', 'legal', 'commercial', 'technical', 'operational', 'property', 'access', 'contracts', 'compliance');
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create type dd_status_enum as enum ('not_started', 'requested', 'received', 'reviewed', 'issue', 'cleared');
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create type integration_phase_enum as enum ('day_0_15', 'day_15_30', 'day_30_60', 'day_60_90', 'post_90');
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create type capex_category_enum as enum ('access', 'security', 'repairs', 'signage', 'software', 'fire_safety', 'other');
+exception
+  when duplicate_object then null;
+end $$;
+
+-- ========== PMS TABLES ==========
+
+create table if not exists customers (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references organizations(id) on delete cascade,
+  customer_type customer_type_enum not null,
+  first_name text not null,
+  last_name text not null,
+  company_name text,
+  email text not null,
+  phone text,
+  preferred_language text default 'nl',
+  billing_address text,
+  vat_number text,
+  national_id_reference text,
+  id_status id_status_enum not null default 'not_required',
+  risk_status risk_status_enum not null default 'normal',
+  notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique(organization_id, email)
+);
+
+create table if not exists tenancies (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references organizations(id) on delete cascade,
+  facility_id uuid not null references facilities(id) on delete cascade,
+  customer_id uuid not null references customers(id) on delete cascade,
+  resource_id uuid not null references units(id) on delete cascade,
+  status tenancy_status_enum not null default 'reserved',
+  start_date date not null,
+  move_in_date date,
+  move_out_date date,
+  notice_date date,
+  monthly_rent numeric not null,
+  deposit_amount numeric,
+  billing_day integer check (billing_day between 1 and 31),
+  contract_id uuid references contracts(id),
+  billing_schedule_id uuid references billing_schedules(id),
+  access_status access_status_enum default 'pending',
+  payment_status payment_status_enum default 'pending',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists contract_templates (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references organizations(id) on delete cascade,
+  country text not null,
+  region text,
+  language text not null,
+  customer_type text,
+  name text not null,
+  version text not null,
+  body text not null,
+  status text not null default 'active',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists contracts (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references organizations(id) on delete cascade,
+  facility_id uuid not null references facilities(id) on delete cascade,
+  customer_id uuid not null references customers(id) on delete cascade,
+  tenancy_id uuid not null references tenancies(id) on delete cascade,
+  template_id uuid references contract_templates(id),
+  language text not null,
+  jurisdiction text,
+  status contract_status_enum not null default 'draft',
+  contract_number text,
+  start_date date not null,
+  accepted_at timestamptz,
+  signed_at timestamptz,
+  terminated_at timestamptz,
+  pdf_url text,
+  ip_address text,
+  audit_snapshot jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists invoices (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references organizations(id) on delete cascade,
+  facility_id uuid not null references facilities(id) on delete cascade,
+  customer_id uuid not null references customers(id) on delete cascade,
+  tenancy_id uuid not null references tenancies(id) on delete cascade,
+  invoice_number text not null,
+  invoice_date date not null,
+  due_date date not null,
+  status invoice_status_enum not null default 'draft',
+  subtotal numeric not null,
+  vat_amount numeric not null,
+  total numeric not null,
+  outstanding_amount numeric,
+  currency text default 'EUR',
+  payment_method text,
+  structured_reference text,
+  notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique(organization_id, invoice_number)
+);
+
+create table if not exists invoice_lines (
+  id uuid primary key default gen_random_uuid(),
+  invoice_id uuid not null references invoices(id) on delete cascade,
+  description text not null,
+  quantity numeric not null default 1,
+  unit_price numeric not null,
+  vat_rate numeric default 21,
+  line_total numeric not null,
+  line_type text not null default 'rent',
+  created_at timestamptz not null default now()
+);
+
+create table if not exists payments (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references organizations(id) on delete cascade,
+  invoice_id uuid references invoices(id) on delete cascade,
+  customer_id uuid not null references customers(id) on delete cascade,
+  tenancy_id uuid references tenancies(id) on delete cascade,
+  provider payment_provider_enum not null default 'manual',
+  provider_payment_id text,
+  amount numeric not null,
+  currency text default 'EUR',
+  status payment_status_enum not null default 'pending',
+  payment_date timestamptz,
+  method payment_method_enum not null default 'manual',
+  failure_reason text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists payment_methods (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references organizations(id) on delete cascade,
+  customer_id uuid not null references customers(id) on delete cascade,
+  provider text not null,
+  method_type payment_method_enum not null,
+  status access_status_enum not null default 'active',
+  mandate_reference text,
+  last4 text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists billing_schedules (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references organizations(id) on delete cascade,
+  tenancy_id uuid not null references tenancies(id) on delete cascade,
+  frequency text not null default 'monthly',
+  next_invoice_date date not null,
+  billing_day integer check (billing_day between 1 and 31),
+  amount numeric not null,
+  status text not null default 'active',
+  auto_generate_invoice boolean default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists access_credentials (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references organizations(id) on delete cascade,
+  facility_id uuid not null references facilities(id) on delete cascade,
+  customer_id uuid not null references customers(id) on delete cascade,
+  tenancy_id uuid not null references tenancies(id) on delete cascade,
+  credential_type credential_type_enum not null,
+  credential_reference text not null,
+  status access_status_enum not null default 'pending',
+  valid_from date,
+  valid_until date,
+  provider text default 'manual',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists access_events (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references organizations(id) on delete cascade,
+  facility_id uuid not null references facilities(id) on delete cascade,
+  customer_id uuid not null references customers(id) on delete cascade,
+  tenancy_id uuid not null references tenancies(id) on delete cascade,
+  credential_id uuid references access_credentials(id) on delete cascade,
+  event_type text not null,
+  event_time timestamptz not null default now(),
+  source text not null default 'manual',
+  notes text,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists tasks (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references organizations(id) on delete cascade,
+  facility_id uuid not null references facilities(id) on delete cascade,
+  related_customer_id uuid references customers(id) on delete set null,
+  related_tenancy_id uuid references tenancies(id) on delete set null,
+  related_resource_id uuid references units(id) on delete set null,
+  task_type task_type_enum not null,
+  title text not null,
+  description text,
+  priority task_priority_enum not null default 'medium',
+  status task_status_enum not null default 'open',
+  due_date date,
+  assigned_to text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists maintenance_tickets (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references organizations(id) on delete cascade,
+  facility_id uuid not null references facilities(id) on delete cascade,
+  resource_id uuid references units(id) on delete set null,
+  title text not null,
+  description text,
+  category maintenance_category_enum not null,
+  status text not null default 'open',
+  priority text default 'medium',
+  vendor text,
+  estimated_cost numeric,
+  actual_cost numeric,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists support_tickets (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references organizations(id) on delete cascade,
+  facility_id uuid not null references facilities(id) on delete cascade,
+  customer_id uuid not null references customers(id) on delete cascade,
+  tenancy_id uuid references tenancies(id) on delete set null,
+  subject text not null,
+  message text not null,
+  category support_category_enum not null,
+  status text not null default 'open',
+  priority text default 'medium',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists documents (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references organizations(id) on delete cascade,
+  customer_id uuid references customers(id) on delete set null,
+  tenancy_id uuid references tenancies(id) on delete set null,
+  contract_id uuid references contracts(id) on delete set null,
+  invoice_id uuid references invoices(id) on delete set null,
+  document_type text not null,
+  name text not null,
+  file_url text not null,
+  status text default 'active',
+  created_at timestamptz not null default now()
+);
+
+create table if not exists move_in_workflows (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references organizations(id) on delete cascade,
+  facility_id uuid not null references facilities(id) on delete cascade,
+  tenancy_id uuid not null references tenancies(id) on delete cascade,
+  customer_id uuid not null references customers(id) on delete cascade,
+  resource_id uuid not null references units(id) on delete cascade,
+  status move_workflow_status_enum not null default 'not_started',
+  customer_details_complete boolean default false,
+  contract_accepted boolean default false,
+  first_invoice_paid boolean default false,
+  deposit_paid boolean default false,
+  access_created boolean default false,
+  move_in_instructions_sent boolean default false,
+  unit_ready boolean default false,
+  blocking_reason text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists move_out_workflows (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references organizations(id) on delete cascade,
+  facility_id uuid not null references facilities(id) on delete cascade,
+  tenancy_id uuid not null references tenancies(id) on delete cascade,
+  customer_id uuid not null references customers(id) on delete cascade,
+  resource_id uuid not null references units(id) on delete cascade,
+  status text not null default 'requested',
+  notice_date date,
+  planned_move_out_date date,
+  access_revoked boolean default false,
+  final_invoice_issued boolean default false,
+  deposit_reviewed boolean default false,
+  unit_inspected boolean default false,
+  unit_cleaned boolean default false,
+  unit_returned_to_available boolean default false,
+  notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists acquisition_targets (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references organizations(id) on delete cascade,
+  name text not null,
+  country text not null,
+  region text,
+  asset_type asset_type_enum not null,
+  estimated_units integer,
+  estimated_revenue numeric,
+  website_url text,
+  online_booking text,
+  visible_prices text,
+  google_rating numeric,
+  review_count integer,
+  owner_type text,
+  acquisition_status acquisition_status_enum not null default 'longlist',
+  digital_weakness_score numeric,
+  automation_readiness_score numeric,
+  notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists due_diligence_items (
+  id uuid primary key default gen_random_uuid(),
+  acquisition_target_id uuid not null references acquisition_targets(id) on delete cascade,
+  category dd_category_enum not null,
+  item text not null,
+  status dd_status_enum not null default 'not_started',
+  owner text,
+  notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists integration_plans (
+  id uuid primary key default gen_random_uuid(),
+  acquisition_target_id uuid references acquisition_targets(id) on delete cascade,
+  facility_id uuid references facilities(id) on delete cascade,
+  phase integration_phase_enum not null,
+  task text not null,
+  status text default 'not_started',
+  owner text,
+  due_date date,
+  notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists capex_items (
+  id uuid primary key default gen_random_uuid(),
+  acquisition_target_id uuid references acquisition_targets(id) on delete cascade,
+  facility_id uuid references facilities(id) on delete cascade,
+  category capex_category_enum not null,
+  description text not null,
+  estimated_cost numeric,
+  actual_cost numeric,
+  priority text,
+  status text default 'pending',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists automation_readiness_scores (
+  id uuid primary key default gen_random_uuid(),
+  acquisition_target_id uuid references acquisition_targets(id) on delete cascade,
+  facility_id uuid references facilities(id) on delete cascade,
+  access_feasibility numeric,
+  data_cleanliness numeric,
+  contract_quality numeric,
+  payment_quality numeric,
+  website_quality numeric,
+  operational_complexity numeric,
+  capex_risk numeric,
+  overall_score numeric,
+  notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+-- ========== INDEXES FOR PMS TABLES ==========
+create index if not exists customers_org_id_idx on customers(organization_id);
+create index if not exists customers_email_idx on customers(email);
+create index if not exists tenancies_org_facility_idx on tenancies(organization_id, facility_id, status);
+create index if not exists tenancies_customer_idx on tenancies(customer_id);
+create index if not exists tenancies_resource_idx on tenancies(resource_id);
+create index if not exists contracts_tenancy_idx on contracts(tenancy_id);
+create index if not exists contracts_customer_idx on contracts(customer_id);
+create index if not exists contracts_status_idx on contracts(organization_id, status);
+create index if not exists invoices_customer_idx on invoices(customer_id);
+create index if not exists invoices_tenancy_idx on invoices(tenancy_id);
+create index if not exists invoices_status_idx on invoices(organization_id, status);
+create index if not exists invoice_lines_invoice_idx on invoice_lines(invoice_id);
+create index if not exists payments_invoice_idx on payments(invoice_id);
+create index if not exists payments_customer_idx on payments(customer_id);
+create index if not exists payments_status_idx on payments(organization_id, status);
+create index if not exists payment_methods_customer_idx on payment_methods(customer_id);
+create index if not exists billing_schedules_tenancy_idx on billing_schedules(tenancy_id);
+create index if not exists access_credentials_tenancy_idx on access_credentials(tenancy_id);
+create index if not exists access_credentials_status_idx on access_credentials(organization_id, status);
+create index if not exists access_events_tenancy_idx on access_events(tenancy_id);
+create index if not exists access_events_time_idx on access_events(organization_id, event_time desc);
+create index if not exists tasks_org_status_idx on tasks(organization_id, status);
+create index if not exists tasks_facility_idx on tasks(facility_id);
+create index if not exists tasks_tenancy_idx on tasks(related_tenancy_id);
+create index if not exists maintenance_facility_idx on maintenance_tickets(facility_id);
+create index if not exists maintenance_status_idx on maintenance_tickets(organization_id, status);
+create index if not exists support_customer_idx on support_tickets(customer_id);
+create index if not exists support_status_idx on support_tickets(organization_id, status);
+create index if not exists documents_customer_idx on documents(customer_id);
+create index if not exists documents_tenancy_idx on documents(tenancy_id);
+create index if not exists move_in_workflows_tenancy_idx on move_in_workflows(tenancy_id);
+create index if not exists move_out_workflows_tenancy_idx on move_out_workflows(tenancy_id);
+create index if not exists acquisition_targets_org_idx on acquisition_targets(organization_id);
+create index if not exists due_diligence_target_idx on due_diligence_items(acquisition_target_id);
+create index if not exists integration_plans_target_idx on integration_plans(acquisition_target_id);
+create index if not exists capex_items_target_idx on capex_items(acquisition_target_id);
+create index if not exists automation_scores_target_idx on automation_readiness_scores(acquisition_target_id);
+
+-- ========== RLS POLICIES FOR PMS TABLES ==========
+alter table customers enable row level security;
+alter table tenancies enable row level security;
+alter table contract_templates enable row level security;
+alter table contracts enable row level security;
+alter table invoices enable row level security;
+alter table invoice_lines enable row level security;
+alter table payments enable row level security;
+alter table payment_methods enable row level security;
+alter table billing_schedules enable row level security;
+alter table access_credentials enable row level security;
+alter table access_events enable row level security;
+alter table tasks enable row level security;
+alter table maintenance_tickets enable row level security;
+alter table support_tickets enable row level security;
+alter table documents enable row level security;
+alter table move_in_workflows enable row level security;
+alter table move_out_workflows enable row level security;
+alter table acquisition_targets enable row level security;
+alter table due_diligence_items enable row level security;
+alter table integration_plans enable row level security;
+alter table capex_items enable row level security;
+alter table automation_readiness_scores enable row level security;
+
+-- PMS RLS Policies
+create policy "customers org access" on customers
+for all
+using (is_org_member(organization_id))
+with check (is_org_member(organization_id));
+
+create policy "tenancies org access" on tenancies
+for all
+using (is_org_member(organization_id))
+with check (is_org_member(organization_id));
+
+create policy "contracts org access" on contracts
+for all
+using (is_org_member(organization_id))
+with check (is_org_member(organization_id));
+
+create policy "contract templates org access" on contract_templates
+for all
+using (is_org_member(organization_id))
+with check (is_org_member(organization_id));
+
+create policy "invoices org access" on invoices
+for all
+using (is_org_member(organization_id))
+with check (is_org_member(organization_id));
+
+create policy "invoice lines org access" on invoice_lines
+for select
+using (
+  exists (
+    select 1
+    from invoices i
+    join organizations o on o.id = i.organization_id
+    where i.id = invoice_id
+      and is_org_member(o.id)
+  )
+);
+
+create policy "payments org access" on payments
+for all
+using (is_org_member(organization_id))
+with check (is_org_member(organization_id));
+
+create policy "payment methods org access" on payment_methods
+for all
+using (is_org_member(organization_id))
+with check (is_org_member(organization_id));
+
+create policy "billing schedules org access" on billing_schedules
+for all
+using (is_org_member(organization_id))
+with check (is_org_member(organization_id));
+
+create policy "access credentials org access" on access_credentials
+for all
+using (is_org_member(organization_id))
+with check (is_org_member(organization_id));
+
+create policy "access events org access" on access_events
+for all
+using (is_org_member(organization_id))
+with check (is_org_member(organization_id));
+
+create policy "tasks org access" on tasks
+for all
+using (is_org_member(organization_id))
+with check (is_org_member(organization_id));
+
+create policy "maintenance org access" on maintenance_tickets
+for all
+using (is_org_member(organization_id))
+with check (is_org_member(organization_id));
+
+create policy "support org access" on support_tickets
+for all
+using (is_org_member(organization_id))
+with check (is_org_member(organization_id));
+
+create policy "documents org access" on documents
+for all
+using (is_org_member(organization_id))
+with check (is_org_member(organization_id));
+
+create policy "move in workflows org access" on move_in_workflows
+for all
+using (is_org_member(organization_id))
+with check (is_org_member(organization_id));
+
+create policy "move out workflows org access" on move_out_workflows
+for all
+using (is_org_member(organization_id))
+with check (is_org_member(organization_id));
+
+create policy "acquisition targets org access" on acquisition_targets
+for all
+using (is_org_member(organization_id))
+with check (is_org_member(organization_id));
+
+create policy "due diligence org access" on due_diligence_items
+for select
+using (
+  exists (
+    select 1
+    from acquisition_targets at
+    where at.id = acquisition_target_id
+      and is_org_member(at.organization_id)
+  )
+);
+
+create policy "integration plans org access" on integration_plans
+for select
+using (
+  acquisition_target_id is null
+  or exists (
+    select 1
+    from acquisition_targets at
+    where at.id = acquisition_target_id
+      and is_org_member(at.organization_id)
+  )
+);
+
+create policy "capex items org access" on capex_items
+for select
+using (
+  acquisition_target_id is null
+  or exists (
+    select 1
+    from acquisition_targets at
+    where at.id = acquisition_target_id
+      and is_org_member(at.organization_id)
+  )
+);
+
+create policy "automation scores org access" on automation_readiness_scores
+for select
+using (
+  acquisition_target_id is null
+  or exists (
+    select 1
+    from acquisition_targets at
+    where at.id = acquisition_target_id
+      and is_org_member(at.organization_id)
+  )
+);

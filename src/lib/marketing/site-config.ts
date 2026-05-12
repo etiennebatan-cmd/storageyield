@@ -22,5 +22,9 @@ export const marketingPaths = [
   "/container-opslag-software",
   "/stora-alternatief",
   "/self-storage-software-nederland",
-  "/self-storage-software-belgie"
+  "/self-storage-software-belgie",
+  "/blog",
+  "/blog/hoe-verhoog-je-self-storage-omzet-met-concurrent-analyse",
+  "/blog/ultieme-gids-self-storage-prijzen-nederland",
+  "/blog/waarom-benelux-self-storage-online-boekingen-nodig-heeft"
 ];

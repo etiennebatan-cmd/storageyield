@@ -40,9 +40,15 @@ const navItems = [
     ]
   },
   {
+    label: "Resources",
+    items: [
+      { href: "/blog", label: "Blog" },
+      { href: "/demo", label: "Demo" }
+    ]
+  },
+  {
     label: "Contact",
     items: [
-      { href: "/demo", label: "Bekijk demo" },
       { href: "/signup", label: "Start pilot" }
     ]
   }

@@ -31,7 +31,8 @@ export default function ControlRoomPage() {
         contracts,
         invoices,
         tasks,
-        units
+        units,
+        facilities
       ] = await Promise.all([
         supabaseClient
           .from('tenancies')
@@ -55,9 +56,14 @@ export default function ControlRoomPage() {
           .from('tasks')
           .select('*')
           .eq('organization_id', org.id)
-          .eq('status', 'open'),
+          .eq('status', 'open')
+          .lt('due_date', today),
         supabaseClient
           .from('units')
+          .select('*')
+          .eq('organization_id', org.id),
+        supabaseClient
+          .from('facilities')
           .select('*')
           .eq('organization_id', org.id)
       ]);
@@ -154,4 +160,3 @@ export default function ControlRoomPage() {
     </div>
   );
 }
-
