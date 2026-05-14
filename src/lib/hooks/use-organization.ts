@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabaseClient } from '@/lib/supabase/client';
+import { useSearchParams } from 'next/navigation';
 
 interface Organization {
   id: string;
@@ -11,8 +12,20 @@ interface Organization {
 
 export function useOrganization() {
   const [org, setOrg] = useState<Organization | null>(null);
+  const searchParams = useSearchParams();
+  const isDemo = searchParams?.get('demo') === '1';
 
   useEffect(() => {
+    if (isDemo) {
+      // Return demo organization
+      setOrg({
+        id: 'demo-org',
+        name: 'Demo Organization',
+        owner_user_id: 'demo-user'
+      });
+      return;
+    }
+
     async function loadOrg() {
       try {
         const { data } = await supabaseClient.auth.getSession();
@@ -45,7 +58,7 @@ export function useOrganization() {
     }
 
     loadOrg();
-  }, []);
+  }, [isDemo]);
 
   return org;
 }

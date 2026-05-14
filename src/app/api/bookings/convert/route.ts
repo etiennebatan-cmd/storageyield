@@ -115,10 +115,12 @@ export async function POST(request: Request) {
     .insert({
       organization_id: booking.organization_id,
       tenancy_id: tenancy.id,
-      billing_cycle: "monthly",
+      frequency: "monthly",
+      next_invoice_date: today,
       billing_day: 1,
-      next_billing_date: today,
-      status: "active"
+      amount: rent,
+      status: "active",
+      auto_generate_invoice: false
     });
   if (billingError) return NextResponse.json({ error: billingError.message }, { status: 500 });
 
@@ -165,13 +167,18 @@ export async function POST(request: Request) {
     .from("move_in_workflows")
     .insert({
       organization_id: booking.organization_id,
+      facility_id: booking.facility_id,
       tenancy_id: tenancy.id,
+      customer_id: customerId,
+      resource_id: parsed.data.unit_id,
+      status: "in_progress",
+      customer_details_complete: true,
       contract_accepted: false,
       first_invoice_paid: false,
       deposit_paid: false,
-      access_created: false,
+      access_created: true,
       move_in_instructions_sent: false,
-      unit_ready: false
+      unit_ready: true
     });
   if (workflowError) return NextResponse.json({ error: workflowError.message }, { status: 500 });
 
@@ -180,35 +187,55 @@ export async function POST(request: Request) {
     .from("access_credentials")
     .insert({
       organization_id: booking.organization_id,
+      facility_id: booking.facility_id,
+      customer_id: customerId,
       tenancy_id: tenancy.id,
-      credential_type: "manual",
+      credential_type: "manual_code",
+      credential_reference: `CODE-${Math.random().toString(36).substr(2, 8).toUpperCase()}`,
       status: "pending",
-      access_level: "full",
       valid_from: today,
-      valid_until: null
+      provider: "manual"
     });
   if (accessError) return NextResponse.json({ error: accessError.message }, { status: 500 });
 
+  // Create access event
+  const { error: eventError } = await supabase
+    .from("access_events")
+    .insert({
+      organization_id: booking.organization_id,
+      facility_id: booking.facility_id,
+      customer_id: customerId,
+      tenancy_id: tenancy.id,
+      event_type: "created",
+      source: "system",
+      notes: "Pending manual access credential created on booking conversion"
+    });
+  if (eventError) return NextResponse.json({ error: eventError.message }, { status: 500 });
+
   // Create tasks for missing items
   const tasks = [
-    { title: "Accept contract", description: "Customer needs to accept the draft contract", type: "contract" },
-    { title: "Pay first invoice", description: "Customer needs to pay the first invoice", type: "billing" },
-    { title: "Pay deposit", description: "Customer needs to pay the deposit", type: "billing" },
-    { title: "Create access credential", description: "Create manual access credential for customer", type: "access" },
-    { title: "Send move-in instructions", description: "Send move-in instructions to customer", type: "move_in" },
-    { title: "Prepare unit", description: "Ensure unit is ready for move-in", type: "maintenance" }
+    { title: "Accept contract", description: "Customer needs to accept the draft contract", task_type: "contract" },
+    { title: "Pay first invoice", description: "Customer needs to pay the first invoice", task_type: "billing" },
+    { title: "Pay deposit", description: "Customer needs to pay the deposit", task_type: "billing" },
+    { title: "Create access credential", description: "Create manual access credential for customer", task_type: "access" },
+    { title: "Send move-in instructions", description: "Send move-in instructions to customer", task_type: "move_in" },
+    { title: "Prepare unit", description: "Ensure unit is ready for move-in", task_type: "maintenance" }
   ];
   for (const task of tasks) {
     await supabase
       .from("tasks")
       .insert({
         organization_id: booking.organization_id,
-        tenancy_id: tenancy.id,
+        facility_id: booking.facility_id,
+        related_customer_id: customerId,
+        related_tenancy_id: tenancy.id,
+        related_resource_id: parsed.data.unit_id,
+        task_type: task.task_type,
         title: task.title,
         description: task.description,
-        type: task.type,
-        status: "pending",
-        priority: "high"
+        priority: "high",
+        status: "open",
+        due_date: today
       });
   }
 
@@ -216,7 +243,7 @@ export async function POST(request: Request) {
   const { error: unitUpdateError } = await supabase
     .from("units")
     .update({
-      status: "occupied",
+      status: "reserved",
       current_rent_monthly: rent,
       tenant_start_date: today,
       current_tenant_type: tenantType

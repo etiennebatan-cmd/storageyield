@@ -21,6 +21,14 @@ export default function BillingPage() {
   const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
   const [overdueItems, setOverdueItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isRecordPaymentOpen, setIsRecordPaymentOpen] = useState(false);
+  const [paymentForm, setPaymentForm] = useState({
+    invoice_id: '',
+    amount: '',
+    method: 'bank_transfer',
+    payment_date: new Date().toISOString().split('T')[0]
+  });
+  const [recording, setRecording] = useState(false);
 
   useEffect(() => {
     const organizationId = org?.id;
@@ -64,7 +72,42 @@ export default function BillingPage() {
     load();
   }, [org?.id]);
 
-  if (loading) return <div className="p-4">Loading billing...</div>;
+  const handleRecordPayment = async () => {
+    if (!org?.id) return;
+    setRecording(true);
+    const { error: paymentError } = await supabaseClient
+      .from('payments')
+      .insert({
+        organization_id: org.id,
+        customer_id: invoices.find(inv => inv.id === paymentForm.invoice_id)?.customer_id || '',
+        invoice_id: paymentForm.invoice_id,
+        amount: parseFloat(paymentForm.amount),
+        method: paymentForm.method,
+        status: 'paid',
+        payment_date: paymentForm.payment_date
+      });
+    if (!paymentError) {
+      const { error: updateError } = await supabaseClient
+        .from('invoices')
+        .update({
+          outstanding_amount: Math.max(0, (invoices.find(inv => inv.id === paymentForm.invoice_id)?.outstanding_amount || 0) - parseFloat(paymentForm.amount)),
+          status: (invoices.find(inv => inv.id === paymentForm.invoice_id)?.outstanding_amount || 0) - parseFloat(paymentForm.amount) <= 0 ? 'paid' : 'issued'
+        })
+        .eq('id', paymentForm.invoice_id);
+      if (!updateError) {
+        setPayments(prev => [{ ...paymentForm, id: 'new' } as any, ...prev]);
+        setInvoices(prev => prev.map(inv => inv.id === paymentForm.invoice_id ? { ...inv, outstanding_amount: Math.max(0, inv.outstanding_amount - parseFloat(paymentForm.amount)), status: inv.outstanding_amount - parseFloat(paymentForm.amount) <= 0 ? 'paid' : 'issued' } : inv));
+        setIsRecordPaymentOpen(false);
+        setPaymentForm({
+          invoice_id: '',
+          amount: '',
+          method: 'bank_transfer',
+          payment_date: new Date().toISOString().split('T')[0]
+        });
+      }
+    }
+    setRecording(false);
+  };
 
   const statusColor = (status: string) => {
     const colors: Record<string, string> = {
@@ -91,10 +134,60 @@ export default function BillingPage() {
             <Plus className="h-4 w-4 mr-2" />
             Create Invoice
           </Button>
-          <Button variant="outline" size="sm">
-            <CreditCard className="h-4 w-4 mr-2" />
-            Record Payment
-          </Button>
+          <Dialog open={isRecordPaymentOpen} onOpenChange={setIsRecordPaymentOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                <CreditCard className="h-4 w-4 mr-2" />
+                Record Payment
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Record Payment</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label>Invoice</Label>
+                  <Select value={paymentForm.invoice_id} onValueChange={(value) => setPaymentForm(prev => ({ ...prev, invoice_id: value }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select invoice" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {invoices.filter(inv => inv.outstanding_amount > 0).map(invoice => (
+                        <SelectItem key={invoice.id} value={invoice.id}>
+                          {invoice.invoice_number} - {invoice.customers?.first_name} {invoice.customers?.last_name} (€{invoice.outstanding_amount})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Amount (€)</Label>
+                  <Input type="number" value={paymentForm.amount} onChange={(e) => setPaymentForm(prev => ({ ...prev, amount: e.target.value }))} />
+                </div>
+                <div>
+                  <Label>Method</Label>
+                  <Select value={paymentForm.method} onValueChange={(value) => setPaymentForm(prev => ({ ...prev, method: value }))}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                      <SelectItem value="cash">Cash</SelectItem>
+                      <SelectItem value="card">Card</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Payment Date</Label>
+                  <Input type="date" value={paymentForm.payment_date} onChange={(e) => setPaymentForm(prev => ({ ...prev, payment_date: e.target.value }))} />
+                </div>
+                <Button onClick={handleRecordPayment} disabled={recording}>
+                  {recording ? 'Recording...' : 'Record Payment'}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
@@ -143,7 +236,17 @@ export default function BillingPage() {
                           <div className="flex gap-1">
                             <Button variant="outline" size="sm">View</Button>
                             {invoice.status === 'issued' && (
-                              <Button variant="outline" size="sm">Mark Paid</Button>
+                              <Button variant="outline" size="sm" onClick={async () => {
+                                const { error } = await supabaseClient
+                                  .from('invoices')
+                                  .update({ status: 'paid', outstanding_amount: 0 })
+                                  .eq('id', invoice.id);
+                                if (!error) {
+                                  setInvoices(prev => prev.map(inv => inv.id === invoice.id ? { ...inv, status: 'paid', outstanding_amount: 0 } : inv));
+                                }
+                              }}>
+                                Mark Paid
+                              </Button>
                             )}
                             {invoice.status === 'overdue' && (
                               <>

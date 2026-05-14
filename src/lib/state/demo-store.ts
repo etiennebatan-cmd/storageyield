@@ -26,6 +26,7 @@ import { calculateDataHealth } from "@/lib/data-health";
 import { calculateImpactReport } from "@/lib/impact/impact-report";
 import { calculateMoneyMap } from "@/lib/impact/money-map";
 import { loadDemoState, updateDemoState, type DemoState } from "@/lib/demo-state";
+import { createDemoPmsConversion } from "@/lib/demo-pms-state";
 import type {
   Competitor,
   CompetitorPriceObservation,
@@ -300,6 +301,7 @@ export function createDemoStore(): StorageYieldStore {
           ...current.activity
         ]
       }));
+      await createDemoPmsConversion(booking.id, unitId, input.rent);
     },
     async approveAction(actionId) {
       const state = getState();

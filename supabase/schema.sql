@@ -1343,8 +1343,6 @@ end $$;
 alter type payment_status_enum add value if not exists 'current';
 alter type payment_status_enum add value if not exists 'overdue';
 
-alter table payment_methods alter column status type payment_method_status_enum using status::text::payment_method_status_enum;
-
 do $$
 begin
   create type payment_method_enum as enum ('cash', 'bank_transfer', 'card', 'ideal', 'bancontact', 'sepa', 'manual', 'future');
@@ -1376,13 +1374,6 @@ end $$;
 do $$
 begin
   create type task_type_enum as enum ('booking_followup', 'contract', 'billing', 'access', 'maintenance', 'move_in', 'move_out', 'support', 'revenue', 'compliance', 'other');
-exception
-  when duplicate_object then null;
-end $$;
-
-do $$
-begin
-  create type payment_method_status_enum as enum ('pending', 'active', 'expired', 'failed', 'revoked');
 exception
   when duplicate_object then null;
 end $$;
@@ -1612,18 +1603,27 @@ create table if not exists payments (
   updated_at timestamptz not null default now()
 );
 
+do $$
+begin
+  create type payment_method_status_enum as enum ('pending', 'active', 'expired', 'failed', 'revoked');
+exception
+  when duplicate_object then null;
+end $$;
+
 create table if not exists payment_methods (
   id uuid primary key default gen_random_uuid(),
   organization_id uuid not null references organizations(id) on delete cascade,
   customer_id uuid not null references customers(id) on delete cascade,
   provider text not null,
   method_type payment_method_enum not null,
-  status access_status_enum not null default 'active',
+  status payment_method_status_enum not null default 'active',
   mandate_reference text,
   last4 text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table payment_methods alter column status type payment_method_status_enum using status::text::payment_method_status_enum;
 
 create table if not exists billing_schedules (
   id uuid primary key default gen_random_uuid(),

@@ -176,7 +176,7 @@ export default function ReportsPage() {
                           {tenancy.customers?.first_name} {tenancy.customers?.last_name}
                         </td>
                         <td className="p-2">{tenancy.facilities?.name}</td>
-                        <td className="p-2">{tenancy.resource?.unit_code}</td>
+                        <td className="p-2">{tenancy.resource_id?.slice(0, 8)}</td>
                         <td className="p-2 font-semibold">€{tenancy.monthly_rent}</td>
                         <td className="p-2">
                           <Badge variant="default">{tenancy.status}</Badge>
@@ -196,8 +196,38 @@ export default function ReportsPage() {
               <CardTitle>Occupancy by Resource Type</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">Occupancy analysis by unit type and facility.</p>
-              {/* Add occupancy charts/tables */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm border-collapse">
+                  <thead className="border-b bg-gray-50">
+                    <tr>
+                      <th className="text-left p-2">Facility</th>
+                      <th className="text-left p-2">Status</th>
+                      <th className="text-left p-2">Count</th>
+                      <th className="text-left p-2">Percentage</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.entries(
+                      reports.occupancy.reduce((acc: any, unit: any) => {
+                        const key = `${unit.facility_id}-${unit.status}`;
+                        acc[key] = (acc[key] || 0) + 1;
+                        return acc;
+                      }, {})
+                    ).map(([key, count]: [string, any]) => {
+                      const [facilityId, status] = key.split('-');
+                      const total = reports.occupancy.filter((u: any) => u.facility_id === facilityId).length;
+                      return (
+                        <tr key={key} className="border-b hover:bg-gray-50">
+                          <td className="p-2">{facilityId}</td>
+                          <td className="p-2">{status}</td>
+                          <td className="p-2">{count}</td>
+                          <td className="p-2">{((count / total) * 100).toFixed(1)}%</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -225,22 +255,29 @@ export default function ReportsPage() {
                   <thead className="border-b bg-gray-50">
                     <tr>
                       <th className="text-left p-2">Customer</th>
-                      <th className="text-left p-2">Outstanding Amount</th>
+                      <th className="text-left p-2">Invoice</th>
+                      <th className="text-left p-2">Due Date</th>
                       <th className="text-left p-2">Days Overdue</th>
+                      <th className="text-left p-2">Outstanding</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {reports.debtors.map((debtor: any) => (
-                      <tr key={debtor.id} className="border-b hover:bg-gray-50">
-                        <td className="p-2">
-                          {debtor.customers?.first_name} {debtor.customers?.last_name}
-                        </td>
-                        <td className="p-2 font-semibold text-red-600">€{debtor.outstanding_amount?.toFixed(2)}</td>
-                        <td className="p-2">
-                          <Badge variant="destructive">Overdue</Badge>
-                        </td>
-                      </tr>
-                    ))}
+                    {reports.debtors.map((debtor: any) => {
+                      const dueDate = new Date(debtor.due_date);
+                      const today = new Date();
+                      const daysOverdue = Math.max(0, Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)));
+                      return (
+                        <tr key={debtor.id} className="border-b hover:bg-gray-50">
+                          <td className="p-2">
+                            {debtor.customers?.first_name} {debtor.customers?.last_name}
+                          </td>
+                          <td className="p-2">{debtor.invoice_number}</td>
+                          <td className="p-2">{debtor.due_date}</td>
+                          <td className="p-2">{daysOverdue}</td>
+                          <td className="p-2 font-semibold text-red-600">€{debtor.outstanding_amount?.toFixed(2)}</td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

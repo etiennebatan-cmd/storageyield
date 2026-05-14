@@ -74,12 +74,12 @@ async function main() {
     // Step 1: Create customer
     await page.goto(`${baseUrl}/app/customers?demo=1`, { waitUntil: "networkidle" });
     await page.getByText("Demo workspace enabled").first().waitFor();
-    await page.getByRole("button", { name: /Add Customer|Create Customer/i }).first().click();
+    await page.getByRole("button", { name: /Create Customer/i }).first().click();
     await page.getByPlaceholder("First name").fill("Test");
     await page.getByPlaceholder("Last name").fill("Customer");
     await page.getByPlaceholder("Email").fill("test-customer@example.com");
     await page.getByPlaceholder("Phone").fill("+32470000002");
-    await page.getByRole("button", { name: "Save" }).click();
+    await page.getByRole("button", { name: "Create Customer" }).click();
     await page.getByText("Customer created successfully").waitFor();
     console.log("✅ Customer created");
 

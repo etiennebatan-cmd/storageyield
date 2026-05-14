@@ -57,7 +57,7 @@ export function BookingConversionWorkspace() {
                       <div className="mt-4 flex flex-wrap gap-2">
                         {booking.status === "requested" ? <Button onClick={() => workspace.moveBooking(booking, "contacted")} variant="secondary">Contacted</Button> : null}
                         {["requested", "contacted"].includes(booking.status) ? <Button onClick={() => setSelected(booking)} variant="secondary">Assign unit</Button> : null}
-                        {booking.status === "reserved" ? <Button onClick={() => workspace.moveBooking(booking, "converted")} variant="secondary">Convert</Button> : null}
+                        {booking.status === "reserved" ? <Button onClick={() => workspace.moveBooking(booking, "converted")} variant="secondary">Convert now</Button> : null}
                         {!["converted", "lost"].includes(booking.status) ? <Button onClick={() => workspace.moveBooking(booking, "lost")} variant="ghost">Lost</Button> : null}
                         <Button onClick={() => { navigator.clipboard.writeText(`Hi ${booking.customer_name}, we can reserve your ${booking.unit_type_name} at ${booking.facility_name}. Are you available today to confirm?`); workspace.toast("Follow-up copied"); }} variant="ghost">Copy follow-up</Button>
                       </div>
